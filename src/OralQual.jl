@@ -12,7 +12,7 @@ using ColorSchemes
 
 
 include("EKRMLE.jl")
-
+include("DarcyHelpers1D.jl")
 
 
 
