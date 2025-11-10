@@ -7,14 +7,16 @@ using LinearAlgebra
 
 ## Setup
 
-function ℋ(v₁,v₂) # Banana Distribution
-    return (1)*(v₂) - (1/2)*(v₁)^2
-end
-
 
 function ℋ(v₁,v₂) # Donut
     return (v₁^2+v₂^2-25)^2
 end
+
+
+function ℋ(v₁,v₂) # Banana Distribution
+    return (1)*(v₂) - (1/2)*(v₁)^2
+end
+
 
 function init_rect(J; x1=-1,x2=1,y1=-2,y2=2)
     x = x1 .+ (x2-x1) .*rand(J)
@@ -26,7 +28,7 @@ end
 y = [0.0]
 Γ = (1/2)*I(1)
 J = 5000
-steps = 200
+steps = 500
 V₀ = init_rect(J; x1=-7,x2=10,y1=-10,y2=15)
 ekrmleobj = EKRMLEObj(V₀, y, Γ)
 H_single(::Nothing,v::AbstractVector) = [ℋ(v[1],v[2])]
