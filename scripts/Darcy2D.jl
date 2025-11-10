@@ -65,11 +65,11 @@ function eff_2D(y::AbstractVector{T}) where {T<:AbstractFloat}
     f = zeros(T, N, N)
     for i = 1:N
         if y[i] <= 4/6
-            f[:, i] .= 3000.0
+            f[:, i] .= 1000.0
         elseif (y[i] > 4/6 && y[i] <= 5/6)
-            f[:, i] .= 4000.0
+            f[:, i] .= 2000.0
         elseif y[i] > 5/6
-            f[:, i] .= 5000.0
+            f[:, i] .= 3000.0
         end
 
     end
@@ -120,7 +120,7 @@ function KL_expansion_2D(x::Array{flt,1}, Nₖ::int, α::flt=2.0, τ::flt=3.0, �
         elseif pairs[i, 2] == 0
             φ[:, :, i] = sqrt(2)*cos.(pi * (pairs[i, 1]*X))
         else
-            φ[:, :, i] = 2*cos(pi * (pairs[i, 2]*Y)) .* cos(pi * (pairs[i, 1]*X))
+            φ[:, :, i] = 2*cos.(pi * (pairs[i, 2]*Y)) .* cos.(pi * (pairs[i, 1]*X))
         end
         
         λ[i] = (pi^2 * (pairs[i, 1]^2 + pairs[i, 2]^2) + τ^2)^(-α)
@@ -147,7 +147,31 @@ N, L = 80, 1.0
 obs_ΔN = 10
 α = 2.0
 τ = 3.0
-N_KL = 32
+N_KL = 256
 σ₀ = 1.0
 d = N_KL
 darcy = Darcy_params_2D(N, L, N_KL, obs_ΔN, obs_ΔN, d, α, τ, σ₀)
+
+## Plot
+function plot_field(darcy::Darcy_params_2D{T, TI}, u::Array{T, 2}, obs::Bool=false, filename::String="None") where {T<:AbstractFloat,TI<:Int}
+    N = darcy.Nₓ
+    X = darcy.X
+
+    fig = Figure(size = (800,800))
+    ax = Axis(fig[1,1], title = "log field")
+
+    XX, YY = repeat(X, 1, N), repeat(X, 1, N)'
+    hm = heatmap!(ax, X, X, u, colormap=:magma)
+    Colorbar(fig[1,2], hm)
+
+    if obs
+        x_obs, y_obs = XX[darcy.x_locs, darcy.y_locs][:], YY[darcy.x_locs, darcy.y_locs][:]
+        scatter(x_obs, y_obs, color=:black)
+    end
+
+    display(fig)
+    return fig
+
+end
+
+plot_field(darcy, darcy.logk_2d, false)
