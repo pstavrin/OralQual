@@ -2,7 +2,8 @@ using OralQual
 using LinearAlgebra
 using Random
 using CairoMakie
-using Distribution
+using Distributions
+using SparseArrays
 
 ## Helpers 
 
@@ -140,17 +141,103 @@ function KL_expansion_2D(x::Array{flt,1}, Nₖ::int, α::flt=2.0, τ::flt=3.0, �
 end
 
 
+function ind(darcy::Darcy_params_2D{T,TI}, xi::TI, yi::TI) where {T<:AbstractFloat,TI<:Int}
+    return (xi-1) + (yi-2)*(darcy.Nₓ - 2)
+    
+end
+
+function Darcy_2D_solver(darcy::Darcy_params_2D{T,TI}, k::Array{T,2}) where {T<:AbstractFloat,TI<:Int}
+    Δx, N = darcy.Δx, darcy.Nₓ
+    C = 2*(Δx^2)
+    f = darcy.f
+
+    indX = TI[]
+    indY = TI[]
+    vals = T[]
+
+    for yi = 2:N-1
+        for xi = 2:N-1
+            xyi = ind(darcy, xi, yi)
+
+            # top
+            if yi == N-1
+                push!(indX, xyi)
+                push!(indY, xyi)
+                push!(vals, (k[xi,yi]+k[xi,yi+1])/C)
+            else
+                append!(indX, [xyi, xyi])
+                append!(indY, [xyi, ind(darcy, xi, yi+1)])
+                append!(vals, [(k[xi, yi] + k[xi, yi+1])/C, -(k[xi, yi] + k[xi, yi+1])/C])
+            end
+
+            # bottom
+            if yi == 2
+                push!(indX, xyi)
+                push!(indY, xyi)
+                push!(vals, (k[xi,yi]+k[xi,yi-1])/C)
+            else
+                append!(indX, [xyi, xyi])
+                append!(indY, [xyi, ind(darcy, xi, yi-1)])
+                append!(vals, [(k[xi, yi] + k[xi, yi-1])/C, -(k[xi, yi] + k[xi, yi-1])/C])
+            end
+
+            # right
+            if xi == N-1
+                push!(indX, xyi)
+                push!(indY, xyi)
+                push!(vals, (k[xi,yi]+k[xi+1,yi])/C)
+            else
+                append!(indX, [xyi, xyi])
+                append!(indY, [xyi, ind(darcy, xi+1, yi)])
+                append!(vals, [(k[xi, yi] + k[xi+1, yi])/C, -(k[xi, yi] + k[xi+1, yi])/C])
+            end
+
+            # left
+            if xi == 2
+                push!(indX, xyi)
+                push!(indY, xyi)
+                push!(vals, (k[xi,yi]+k[xi-1,yi])/C)
+            else
+                append!(indX, [xyi, xyi])
+                append!(indY, [xyi, ind(darcy, xi-1, yi)])
+                append!(vals, [(k[xi, yi] + k[xi-1, yi])/C, -(k[xi, yi] + k[xi-1, yi])/C])
+            end
+            
+        end
+    end
+
+
+    df = sparse(indX, indY, vals, (N-2)^2, (N-2)^2)
+    h = df\(f[2:N-1, 2:N-1])[:]
+
+    h2d = zeros(T, N, N)
+    h2d[2:N-1, 2:N-1] .= reshape(h, N-2, N-2)
+
+    return h2d
+
+end
+
+
+
+
+
 
 
 ## Setup
-N, L = 80, 1.0
-obs_ΔN = 10
+N, L = 256, 1.0
+obs_ΔN = 15
 α = 2.0
 τ = 3.0
-N_KL = 256
+N_KL = 128
 σ₀ = 1.0
 d = N_KL
 darcy = Darcy_params_2D(N, L, N_KL, obs_ΔN, obs_ΔN, d, α, τ, σ₀)
+κ = exp.(darcy.logk_2d)
+y_nonoise = Darcy_2D_solver(darcy, κ)
+
+
+
+
 
 ## Plot
 function plot_field(darcy::Darcy_params_2D{T, TI}, u::Array{T, 2}, obs::Bool=false, filename::String="None") where {T<:AbstractFloat,TI<:Int}
@@ -165,8 +252,10 @@ function plot_field(darcy::Darcy_params_2D{T, TI}, u::Array{T, 2}, obs::Bool=fal
     Colorbar(fig[1,2], hm)
 
     if obs
-        x_obs, y_obs = XX[darcy.x_locs, darcy.y_locs][:], YY[darcy.x_locs, darcy.y_locs][:]
-        scatter(x_obs, y_obs, color=:black)
+        x_obs, y_obs = X[darcy.x_locs], X[darcy.y_locs]
+        x_pts = repeat(x_obs, inner = length(y_obs))
+        y_pts = repeat(y_obs, outer = length(x_obs))
+        scatter!(ax, x_pts, y_pts; color=:black, markersize = 15)
     end
 
     display(fig)
@@ -175,3 +264,5 @@ function plot_field(darcy::Darcy_params_2D{T, TI}, u::Array{T, 2}, obs::Bool=fal
 end
 
 plot_field(darcy, darcy.logk_2d, false)
+
+plot_field(darcy, y_nonoise, true)
