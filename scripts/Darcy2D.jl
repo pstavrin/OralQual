@@ -218,22 +218,70 @@ function Darcy_2D_solver(darcy::Darcy_params_2D{T,TI}, k::Array{T,2}) where {T<:
 end
 
 
+function get_data(darcy::Darcy_params_2D{T,TI}, h::Array{T,2}) where {T<:AbstractFloat,TI<:Int}
+    data = h[darcy.x_locs, darcy.y_locs]
+
+    return data[:] 
+end
+
+
+function get_logk_2D(darcy::Darcy_params_2D{T,TI}, v::AbstractVector{T}) where {T<:AbstractFloat, TI<:Int}
+    N, N_KL = darcy.Nₓ, darcy.N_KL
+    λ, φ = darcy.λ, darcy.φ
+    d = darcy.d
+
+    @assert(d <= N_KL)
+    logk = zeros(T, N, N)
+    for i = 1 : d
+        logk .+= v[i] * sqrt(λ[i]) * φ[:, :, i]
+    end
+
+    return logk
+    
+end
+
+function fwd_2D(darcy::Darcy_params_2D{T,TI}, v::AbstractVector{T}) where {T<:AbstractFloat, TI<:Int}
+
+    logk = get_logk_2D(darcy, v)
+    k = exp.(logk)
+    h = Darcy_2D_solver(darcy, k)
+    y = get_data(darcy, h)
+
+    return y
+    
+end
+
+
+function fwd_RLS_2D(darcy::Darcy_params_2D{T,TI}, v::AbstractVector{T}) where {T<:AbstractFloat, TI<:Int}
+    y = fwd_2D(darcy, v)
+    return [y ; v]
+end
+
 
 
 
 
 
 ## Setup
-N, L = 256, 1.0
-obs_ΔN = 15
+N, L = 80, 1.0
+obs_ΔN = 5
 α = 2.0
-τ = 3.0
-N_KL = 128
+τ = 10.0
+N_KL = 8
 σ₀ = 1.0
 d = N_KL
+noise_level = 0.05 # 5% of output
 darcy = Darcy_params_2D(N, L, N_KL, obs_ΔN, obs_ΔN, d, α, τ, σ₀)
 κ = exp.(darcy.logk_2d)
-y_nonoise = Darcy_2D_solver(darcy, κ)
+h = Darcy_2D_solver(darcy, κ)
+y_nonoise = get_data(darcy, h)
+# create noisy observations
+y = copy(y_nonoise)
+for i = 1:darcy.n
+    noise = rand(Normal(0, noise_level*y[i]))
+    y[i] += noise
+end
+Γ = Array(Diagonal(fill(1.0, length(y))))
 
 
 
@@ -265,4 +313,28 @@ end
 
 plot_field(darcy, darcy.logk_2d, false)
 
-plot_field(darcy, y_nonoise, true)
+plot_field(darcy, h, true)
+
+
+## EKRMLE
+# Need to solve a Bayesian IP
+# Treat prior as 𝒩(0, I)
+n, d = length(y), darcy.d
+Γ_pr = I(d)
+Γ_RLS = Matrix{Float64}(I(n+d))
+Γ_RLS[1:n, 1:n] .= Matrix{Float64}(Γ)
+Γ_RLS[n+1:end, n+1:end] .= Matrix{Float64}(Γ_pr)
+Γ_RLS = Symmetric(Γ_RLS)
+y_RLS = vcat(Vector{Float64}(y), zeros(Float64, d))
+J = 500
+v₀ = rand(d, J)
+ekrmleobj = EKRMLEObj(v₀, y_RLS, Γ_RLS)
+fwd_RLS_single(darcy, v) = fwd_RLS_2D(darcy, v)
+steps = 30
+EKRMLE_run!(ekrmleobj, darcy, fwd_RLS_single, steps)
+
+
+## Plot EKRMLE field
+μ = vec(mean(ekrmleobj.V[end],dims=2))
+logk_EKRMLE = get_logk_2D(darcy, μ)
+plot_field(darcy, logk_EKRMLE, false)
