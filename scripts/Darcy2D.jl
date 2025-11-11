@@ -7,7 +7,7 @@ using SparseArrays
 
 
 ## Setup
-N, L = 50, 1.0
+N, L = 100, 1.0
 obs_ΔN = 3
 α = 1.0
 τ = 10.0
