@@ -7,10 +7,10 @@ using SparseArrays
 
 
 ## Setup
-N, L = 80, 1.0
+N, L = 50, 1.0
 obs_ΔN = 3
-α = 3.0
-τ = 15.0
+α = 1.0
+τ = 10.0
 N_KL = 16
 σ₀ = 1.0
 d = N_KL
@@ -26,10 +26,6 @@ for i = 1:darcy.n
     y[i] += noise
 end
 Γ = Array(Diagonal(fill(1.0, length(y))))
-
-
-
-
 
 ## Plot truth and solution
 plot_field(darcy, darcy.logk_2d, false)
