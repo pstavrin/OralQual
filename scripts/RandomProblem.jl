@@ -42,7 +42,7 @@ end
 ## Setup
 n = 5
 d = 8
-J = 100000
+J = 10000
 H, Γ, V₀ = randomLinearProblem(n, d, J, rankdef=true)
 truth = rand(d, 1)
 ε = rand(MvNormal(Γ)) # noise
@@ -157,7 +157,7 @@ ax1 = Axis(fig[1, 1])
 ax1.yreversed=true
 ax2 = Axis(fig[1, 3])
 ax2.yreversed=true
-hm1 = heatmap!(ax1, C; colormap=:magma)
+hm1 = heatmap!(ax1, P*C*P'; colormap=:magma)
 Colorbar(fig[1, 2], hm1)
 hm2 = heatmap!(ax2, P*pHessian*P'; colormap=:magma)
 Colorbar(fig[1, 4], hm2)
