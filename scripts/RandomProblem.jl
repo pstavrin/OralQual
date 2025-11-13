@@ -40,9 +40,9 @@ function randomLinearProblem(n::Int, d::Int, J::Int; rankdef=false, T=Float64, r
 end
 
 ## Setup
-n = 5
-d = 8
-J = 10000
+n = 10
+d = 20
+J = 1000
 H, Γ, V₀ = randomLinearProblem(n, d, J, rankdef=true)
 truth = rand(d, 1)
 ε = rand(MvNormal(Γ)) # noise
@@ -161,4 +161,19 @@ hm1 = heatmap!(ax1, P*C*P'; colormap=:magma)
 Colorbar(fig[1, 2], hm1)
 hm2 = heatmap!(ax2, P*pHessian*P'; colormap=:magma)
 Colorbar(fig[1, 4], hm2)
+display(fig)
+
+## plot some marginals
+m1 = 10
+m2 = 6
+V_marg = obj.V[end][[m1,m2],:]
+PV_marg = (P*obj.V[end])[[m1,m2],:]
+
+fig = Figure(size=(900,600))
+ax = Axis(fig[1,1], xlabel="", ylabel="", title="marginals")
+scatter!(ax, V_marg[1,:], V_marg[2,:]; markersize=15, label="true")
+scatter!(ax, PV_marg[1,:], PV_marg[2,:]; markersize=15, marker=:cross ,label = "P-space")
+
+axislegend(ax; position=:rb, framevisible = false, labelsize=20)
+
 display(fig)
