@@ -7,8 +7,8 @@ using SparseArrays
 
 
 ## Setup
-N, L = 100, 1.0
-obs_ΔN = 3
+N, L = 80, 1.0
+obs_ΔN = 5
 α = 1.0
 τ = 10.0
 N_KL = 16
@@ -63,7 +63,7 @@ plot_field(darcy, abs.(darcy.logk_2d - logk_EKRMLE))
 
 ## Plot some marginals
 m1 = 3
-m2 = 2
+m2 = 10
 burn_in = Int(1.8e6)
 burn_out = Int(2e6)
 V_marg = ekrmleobj.V[end][[m1,m2],:]

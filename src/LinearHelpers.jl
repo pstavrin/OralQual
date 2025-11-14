@@ -30,7 +30,7 @@ function randomLinearProblemObj(n::TI, d::TI, J::TI; rankdef::Bool=true, T=Float
     # Random forward opertor
     H = rand(rng, T, n, d)
     L = (0.5)*rand(rng, T, n, n)
-    Γ = Symmetric(L * L' + 1e-1I)
+    Γ = Symmetric(L * L' + 1e-1*I)
 
 
     if rankdef

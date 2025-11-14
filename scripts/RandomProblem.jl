@@ -42,6 +42,8 @@ Colorbar(fig[1, 2], hm1)
 hm2 = heatmap!(ax2, prob.pHess; colormap=:magma)
 Colorbar(fig[1, 4], hm2)
 display(fig)
+#save("plots/cov_compare.pdf", fig)
+
 
 ## Spectral projectors
 projectors = spectralproj(prob, _samplecov(prob.V0))
@@ -58,6 +60,7 @@ Colorbar(fig[1, 2], hm1)
 hm2 = heatmap!(ax2, P*prob.pHess*P'; colormap=:magma)
 Colorbar(fig[1, 4], hm2)
 display(fig)
+#save("plots/cov_compare_P.pdf", fig)
 
 ## plot some marginals
 colors = [get(ColorSchemes.magma, t) for t in range(0, stop=1, length=5)]
@@ -79,20 +82,21 @@ display(fig)
 ##
 μ = colmean(obj.V[end])
 Pμ = P*μ
-fig = Figure(size=(1000,600))
+fig = Figure(size=(1000,500))
 ax1 = Axis(fig[1, 1], title = L"\text{Full state space }\mathbb{R}^d", titlesize=30)
 ax2 = Axis(fig[2,1], title = L"\textbf{P}\text{ space}", titlesize=30)
 scatterlines!(ax1, prob.v_star;linewidth=5, markersize=15, label=L"\textbf{v}^\star", color=colors[2])
 scatterlines!(ax1, μ;linewidth=5, linestyle=:dash, markersize=15, label=L"\text{E}[\textbf{v}_\text{end}^{(1:J)}]", color=colors[4])
 scatterlines!(ax2, P*prob.v_star;linewidth=5, markersize=20, label=L"\textbf{Pv}^\star", color=colors[2])
 scatterlines!(ax2, Pμ;linestyle=:dash, linewidth=4, marker=:cross, markersize=18, label=L"\text{E}[\textbf{Pv}_\text{end}^{(1:J)}]", color=colors[4])
-axislegend(ax1; position=:cb, framevisible = false, labelsize=30)
-axislegend(ax2; position=:cb, framevisible = false, labelsize=30)
+axislegend(ax1; position=:lb, framevisible = false, labelsize=30)
+axislegend(ax2; position=:lb, framevisible = false, labelsize=30)
 display(fig)
+#save("plots/mean_compare.pdf", fig)
 
 ## compare against black box sampler
 bb_ens = rand(MvNormal(P*prob.v_star, Symmetric(P*prob.pHess*P'+1e-15*I)), J)
-m1 = 10
+m1 = 1
 m2 = 15
 bb_marg = bb_ens[[m1,m2],:]
 PV_marg = (P*obj.V[end])[[m1,m2],:]

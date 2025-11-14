@@ -10,6 +10,7 @@ using BlockDiagonals
 using LaTeXStrings
 using ColorSchemes
 using SparseArrays
+using MAT
 
 
 
