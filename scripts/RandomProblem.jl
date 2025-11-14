@@ -3,6 +3,7 @@ using LinearAlgebra
 using Random
 using CairoMakie
 using Distributions
+using ColorSchemes
 
 
 @inline colmean(V::AbstractMatrix) = vec(mean(V, dims=2))
@@ -16,8 +17,8 @@ function _samplecov(V::AbstractMatrix)
 end
 
 ## Setup
-n = 50
-d = 5
+n = 5
+d = 20
 J = 10000
 prob = randomLinearProblemObj(n, d, J)
 
@@ -59,47 +60,47 @@ Colorbar(fig[1, 4], hm2)
 display(fig)
 
 ## plot some marginals
-m1 = 1
-m2 = 2
+colors = [get(ColorSchemes.magma, t) for t in range(0, stop=1, length=5)]
+m1 = 10
+m2 = 5
 V_marg = obj.V[end][[m1,m2],:]
 PV_marg = (P*obj.V[end])[[m1,m2],:]
 
 fig = Figure(size=(900,600))
 ax = Axis(fig[1,1], xlabel="", ylabel="", title="marginals")
-scatter!(ax, V_marg[1,:], V_marg[2,:]; markersize=15, label="true")
-scatter!(ax, PV_marg[1,:], PV_marg[2,:]; markersize=15, marker=:cross ,label = "P-space")
+scatter!(ax, V_marg[1,:], V_marg[2,:]; markersize=15, label="true", color=(colors[2], 0.30))
+scatter!(ax, PV_marg[1,:], PV_marg[2,:]; markersize=15 ,label = "P-space", color=(colors[4], 0.25))
 
 axislegend(ax; position=:rb, framevisible = false, labelsize=20)
 
 display(fig)
 
 
-## 
+##
 μ = colmean(obj.V[end])
 Pμ = P*μ
-fig = Figure(size=(900,400))
+fig = Figure(size=(1000,500))
 ax1 = Axis(fig[1, 1], title = "Full space")
 ax2 = Axis(fig[2,1], title = "P space")
-scatterlines!(ax1, prob.v_star;linewidth=3, markersize=15, label="LS")
-scatterlines!(ax1, μ;linewidth=3, markersize=15, label="μ")
-scatterlines!(ax2, P*prob.v_star;linewidth=5, markersize=20, label="P-space LS")
-scatterlines!(ax2, Pμ;linestyle=:dash, linewidth=4, marker=:cross, markersize=18, label="P-space")
+scatterlines!(ax1, prob.v_star;linewidth=5, markersize=15, label="LS", color=colors[2])
+scatterlines!(ax1, μ;linewidth=4, linestyle=:dash, markersize=15, label="μ", color=colors[4])
+scatterlines!(ax2, P*prob.v_star;linewidth=5, markersize=20, label="P-space LS", color=colors[2])
+scatterlines!(ax2, Pμ;linestyle=:dash, linewidth=4, marker=:cross, markersize=18, label="P-space", color=colors[4])
 
 
 display(fig)
 
 ## compare against black box sampler
 bb_ens = rand(MvNormal(P*prob.v_star, Symmetric(P*prob.pHess*P'+1e-15*I)), J)
-
 m1 = 1
-m2 = 2
+m2 = 5
 bb_marg = bb_ens[[m1,m2],:]
 PV_marg = (P*obj.V[end])[[m1,m2],:]
 
 fig = Figure(size=(900,600))
 ax = Axis(fig[1,1], xlabel="", ylabel="", title="RMLE in P-space")
-scatter!(ax, bb_marg[1,:], bb_marg[2,:]; markersize=15, label="black-box")
-scatter!(ax, PV_marg[1,:], PV_marg[2,:]; markersize=15, marker=:cross ,label = "EKRMLE")
+scatter!(ax, bb_marg[1,:], bb_marg[2,:]; markersize=15, label="black-box", color=(colors[2], 0.30))
+scatter!(ax, PV_marg[1,:], PV_marg[2,:]; markersize=15 ,label = "EKRMLE",  color=(colors[4], 0.20))
 
 axislegend(ax; position=:rb, framevisible = false, labelsize=20)
 
