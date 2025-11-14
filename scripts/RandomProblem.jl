@@ -33,9 +33,9 @@ EKRMLE_run!(obj, prob, H_s, iters)
 C = _samplecov(obj.V[end])
 ## 
 fig = Figure(size=(900,400))
-ax1 = Axis(fig[1, 1])
+ax1 = Axis(fig[1, 1], title=L"\text{Cov}[\textbf{v}_\text{end}^{(1:J)}]", titlesize=30)
 ax1.yreversed=true
-ax2 = Axis(fig[1, 3])
+ax2 = Axis(fig[1, 3], title = L"(\textbf{H}^⊤\textbf{Γ}^{-1}\textbf{H})^†", titlesize=30)
 ax2.yreversed=true
 hm1 = heatmap!(ax1, C; colormap=:magma)
 Colorbar(fig[1, 2], hm1)
@@ -49,9 +49,9 @@ P = real.(projectors.P)
 
 ## 
 fig = Figure(size=(900,400))
-ax1 = Axis(fig[1, 1])
+ax1 = Axis(fig[1, 1], title=L"\text{Cov}[\textbf{Pv}_\text{end}^{(1:J)}]", titlesize=30)
 ax1.yreversed=true
-ax2 = Axis(fig[1, 3])
+ax2 = Axis(fig[1, 3] , title = L"\textbf{P}(\textbf{H}^⊤\textbf{Γ}^{-1}\textbf{H})^†\textbf{P}^⊤", titlesize=30)
 ax2.yreversed=true
 hm1 = heatmap!(ax1, P*C*P'; colormap=:magma)
 Colorbar(fig[1, 2], hm1)
@@ -61,7 +61,7 @@ display(fig)
 
 ## plot some marginals
 colors = [get(ColorSchemes.magma, t) for t in range(0, stop=1, length=5)]
-m1 = 10
+m1 = 1
 m2 = 5
 V_marg = obj.V[end][[m1,m2],:]
 PV_marg = (P*obj.V[end])[[m1,m2],:]
@@ -79,21 +79,21 @@ display(fig)
 ##
 μ = colmean(obj.V[end])
 Pμ = P*μ
-fig = Figure(size=(1000,500))
-ax1 = Axis(fig[1, 1], title = "Full space")
-ax2 = Axis(fig[2,1], title = "P space")
-scatterlines!(ax1, prob.v_star;linewidth=5, markersize=15, label="LS", color=colors[2])
-scatterlines!(ax1, μ;linewidth=4, linestyle=:dash, markersize=15, label="μ", color=colors[4])
-scatterlines!(ax2, P*prob.v_star;linewidth=5, markersize=20, label="P-space LS", color=colors[2])
-scatterlines!(ax2, Pμ;linestyle=:dash, linewidth=4, marker=:cross, markersize=18, label="P-space", color=colors[4])
-
-
+fig = Figure(size=(1000,600))
+ax1 = Axis(fig[1, 1], title = L"\text{Full state space }\mathbb{R}^d", titlesize=30)
+ax2 = Axis(fig[2,1], title = L"\textbf{P}\text{ space}", titlesize=30)
+scatterlines!(ax1, prob.v_star;linewidth=5, markersize=15, label=L"\textbf{v}^\star", color=colors[2])
+scatterlines!(ax1, μ;linewidth=5, linestyle=:dash, markersize=15, label=L"\text{E}[\textbf{v}_\text{end}^{(1:J)}]", color=colors[4])
+scatterlines!(ax2, P*prob.v_star;linewidth=5, markersize=20, label=L"\textbf{Pv}^\star", color=colors[2])
+scatterlines!(ax2, Pμ;linestyle=:dash, linewidth=4, marker=:cross, markersize=18, label=L"\text{E}[\textbf{Pv}_\text{end}^{(1:J)}]", color=colors[4])
+axislegend(ax1; position=:cb, framevisible = false, labelsize=30)
+axislegend(ax2; position=:cb, framevisible = false, labelsize=30)
 display(fig)
 
 ## compare against black box sampler
 bb_ens = rand(MvNormal(P*prob.v_star, Symmetric(P*prob.pHess*P'+1e-15*I)), J)
-m1 = 1
-m2 = 5
+m1 = 10
+m2 = 15
 bb_marg = bb_ens[[m1,m2],:]
 PV_marg = (P*obj.V[end])[[m1,m2],:]
 
