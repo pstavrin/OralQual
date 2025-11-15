@@ -75,22 +75,24 @@ Fish = (H'/Γ)*H
 C = _samplecov(ekrmleobj.V[end])
 ## Covariance comparison
 fig = Figure(size=(900,400))
-ax1 = Axis(fig[1, 1], title=L"\text{Cov}[\textbf{v}_\text{end}^{(1:J)}]", titlesize=30)
+ax1 = Axis(fig[1, 1], title=L"\text{Cov}[\textbf{v}_\text{end}^{(1:J)}]", titlesize=35)
 ax1.yreversed=true
-ax2 = Axis(fig[1, 3], title = L"\textbf{Γ}_\text{pos}", titlesize=30)
+ax2 = Axis(fig[1, 3], title = L"\textbf{Γ}_\text{pos}", titlesize=35)
 ax2.yreversed=true
 hm1 = heatmap!(ax1, C; colormap=:magma)
 Colorbar(fig[1, 2], hm1)
 hm2 = heatmap!(ax2, Γ_pos; colormap=:magma)
 Colorbar(fig[1, 4], hm2)
 display(fig)
+#save("plots/cov_compare_HE.pdf", fig)
 
 ## Mean comparison
 colors = [get(ColorSchemes.magma, t) for t in range(0, stop=1, length=5)]
 μ = colmean(ekrmleobj.V[end])
-fig = Figure(size=(800,300))
-ax1 = Axis(fig[1, 1], title = L"\text{Posterior mean}", titlesize=30)
-lines!(ax1, μ_pos; linewidth=6, label=L"\textbf{\mu}_\text{pos}", color=colors[2])
-lines!(ax1, μ;linewidth=5, linestyle=:dash, label=L"\text{E}[\textbf{v}_\text{end}^{(1:J)}]", color=colors[4])
-axislegend(ax1; position=:rb, framevisible = false, labelsize=30)
+fig = Figure(size=(900,400))
+ax1 = Axis(fig[1, 1], title = L"\text{Posterior mean comparison}", titlesize=35)
+lines!(ax1, μ_pos; linewidth=7, label=L"𝛍_\text{pos}", color=colors[2])
+lines!(ax1, μ;linewidth=6, linestyle=:dash, label=L"\text{E}[\textbf{v}_\text{end}^{(1:J)}]", color=colors[4])
+axislegend(ax1; position=:rb, framevisible = false, labelsize=35)
 display(fig)
+#save("plots/mean_compare_HE.pdf", fig)

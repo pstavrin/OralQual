@@ -8,7 +8,7 @@ using SparseArrays
 
 ## Setup
 N, L = 80, 1.0
-obs_ΔN = 5
+obs_ΔN = 10
 α = 1.0
 τ = 10.0
 N_KL = 16
