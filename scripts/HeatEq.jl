@@ -6,83 +6,17 @@ using Random
 using ColorSchemes
 using MAT
 using SparseArrays
+using ControlSystems
 
+@inline colmean(V::AbstractMatrix) = vec(mean(V, dims=2))
 
-mutable struct heat_eq_params{T<:AbstractFloat, TI<:Int, UI<:UInt8}
-    # Problem dimensions
-    n::TI # observation space dimension
-    d::TI # state space dimension
-    
-    # Solver params
-    Δt::T # time step
-    T_stop::T # end time
-    TT::Vector{T} # time domain
-    h::T # time between measurements
-    T_meas::Vector{T} # measurement times
-
-    # LTI Operators
-    A::SparseArrays.AbstractSparseMatrixCSC{T,TI}
-    C::SparseArrays.AbstractSparseMatrixCSC{UI,TI}
-
-    # Forward opertor
-    H::AbstractMatrix{T}
-
+function _samplecov(V::AbstractMatrix)
+    # computes sample covariance (column-wise)
+    J = size(V, 2)
+    μ = colmean(V)
+    X = V .- μ
+    return (X * X') / (J-1)
 end
-
-function heat_eq_params(
-    n::TI,
-    Δt::T,
-    T_stop::T,
-    path::AbstractString
-) where {T<:AbstractFloat, TI<:Int}
-    operators = get_heat_data(path)
-    d = size(operators.A, 2)
-    TT = collect(zero(T):Δt:T_stop)
-    h = T_stop/n
-    T_meas = collect(h:h:T_stop)
-
-    # construct H explicitly
-    A, C = operators.A, operators.C
-    skips = Int(round(h/Δt))
-    M = I + Δt*A
-    Mks = M^skips
-    H = zeros(T,n,d)
-    Mpow = I
-    for i = 1 : n
-        Mpow = Mks*Mpow
-        H[i,:] = vec(C*Mpow)'
-    end
-
-
-    heat_eq_params(n,d,Δt,T_stop,TT,h,T_meas,A,C,H)
-    
-end
-
-function get_heat_data(path::AbstractString)
-    data = matread(path)
-    A, C = data["A"], data["C"]
-    return (A = A, C = C)
-end
-
-## 
-function solve_HE(heat::heat_eq_params{T,TI,UI}, v::AbstractVector{T}) where {T<:AbstractFloat, TI<:Int, UI<:UInt8}
-    N_T = length(heat.TT)
-    A, C = heat.A, heat.C
-    Δt = heat.Δt
-    y = zeros(T, N_T, 1)
-    y[1] = (C*v)[1]
-    for i = 2 : N_T
-        v .+= Δt*(A*v)
-        y[i] = (C*v)[1]
-    end
-    return y
-    
-end
-
-
-
-
-
 
 ## Setup
 path = "data/heat-cont.mat"
@@ -93,12 +27,13 @@ heat = heat_eq_params(n, Δt, T_stop, path)
 d = heat.d
 
 ## noisy data
-truth = rand(Normal(0, 1), d)
+Γ_pr = lyap(Matrix(heat.A), I(heat.d))
+truth = rand(MvNormal(vec(zeros(1,d)),Symmetric(Γ_pr)))
 sol_nonoise = solve_HE(heat, truth)
 h, Δt = heat.h, heat.Δt
 meas_idx = Int.(round.(heat.T_meas ./Δt))
 y_nonoise = sol_nonoise[meas_idx]
-σ = 0.5*maximum(y_nonoise)
+σ = 0.08*maximum(abs.(y_nonoise))
 γ = fill(σ^2, n)
 Γ = γ .* I(n)
 ε = rand(MvNormal(vec(zeros(1,n)),Γ))
@@ -107,7 +42,7 @@ y = y_nonoise + ε
 ## Plot data
 fig = Figure()
 ax = Axis(fig[1,1],
-    xlabel=L"Index",
+    xlabel=L"\text{Time}",
 )
 
 scatter!(ax, heat.TT, vec(sol_nonoise), label= L"\text{solution}")
@@ -115,3 +50,47 @@ scatter!(ax, heat.T_meas, y, marker=:cross, label = L"y")
 axislegend(position =:lb, labelsize = 20)
 display(fig)
 
+## inversion
+# We solve the Bayesian IP with prior 𝒩(0,Γ_pr)
+Γ_RLS = Matrix{Float64}(I(n+d))
+Γ_RLS[1:n, 1:n] .= Matrix{Float64}(Γ)
+Γ_RLS[n+1:end, n+1:end] .= Matrix{Float64}(Γ_pr)
+Γ_RLS = Symmetric(Γ_RLS)
+y_RLS = vcat(Vector{Float64}(y), zeros(Float64, d))
+H_RLS = vcat(heat.H, I(d))
+H_RLS_s(::Nothing, v::AbstractVector) = H_RLS * v
+J = 10000
+V0 = rand(d, J)
+ekrmleobj = EKRMLEObj(V0, y_RLS, Γ_RLS)
+iters = 30
+EKRMLE_run!(ekrmleobj, nothing, H_RLS_s, iters)
+
+## True posterior
+H = heat.H
+Fish = (H'/Γ)*H
+Γ_pos = (Fish + Γ_pr\I)\I
+μ_pos = (Γ_pos*H'/Γ)*y
+
+## 
+C = _samplecov(ekrmleobj.V[end])
+## Covariance comparison
+fig = Figure(size=(900,400))
+ax1 = Axis(fig[1, 1], title=L"\text{Cov}[\textbf{v}_\text{end}^{(1:J)}]", titlesize=30)
+ax1.yreversed=true
+ax2 = Axis(fig[1, 3], title = L"\textbf{Γ}_\text{pos}", titlesize=30)
+ax2.yreversed=true
+hm1 = heatmap!(ax1, C; colormap=:magma)
+Colorbar(fig[1, 2], hm1)
+hm2 = heatmap!(ax2, Γ_pos; colormap=:magma)
+Colorbar(fig[1, 4], hm2)
+display(fig)
+
+## Mean comparison
+colors = [get(ColorSchemes.magma, t) for t in range(0, stop=1, length=5)]
+μ = colmean(ekrmleobj.V[end])
+fig = Figure(size=(800,300))
+ax1 = Axis(fig[1, 1], title = L"\text{Posterior mean}", titlesize=30)
+lines!(ax1, μ_pos; linewidth=6, label=L"\textbf{\mu}_\text{pos}", color=colors[2])
+lines!(ax1, μ;linewidth=5, linestyle=:dash, label=L"\text{E}[\textbf{v}_\text{end}^{(1:J)}]", color=colors[4])
+axislegend(ax1; position=:rb, framevisible = false, labelsize=30)
+display(fig)

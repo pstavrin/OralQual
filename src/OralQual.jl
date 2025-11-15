@@ -11,6 +11,7 @@ using LaTeXStrings
 using ColorSchemes
 using SparseArrays
 using MAT
+using ControlSystems
 
 
 
@@ -18,6 +19,7 @@ include("EKRMLE.jl")
 include("DarcyHelpers1D.jl")
 include("DarcyHelpers2D.jl")
 include("LinearHelpers.jl")
+include("HeatEqHelpers.jl")
 
 
 
