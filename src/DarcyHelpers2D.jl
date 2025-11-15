@@ -58,12 +58,14 @@ function eff_2D(y::AbstractVector{T}) where {T<:AbstractFloat}
     N = length(y)
     f = zeros(T, N, N)
     for i = 1:N
-        if y[i] <= 4/6
-            f[:, i] .= 4000.0
+        if y[i] <= 2/6
+            f[:, i] .= 1000.0
+        elseif (y[i] > 2/6 && y[i] <= 4/6)
+            f[:, i] .= 3000.0
         elseif (y[i] > 4/6 && y[i] <= 5/6)
             f[:, i] .= 5000.0
         elseif y[i] > 5/6
-            f[:, i] .= 6000.0
+            f[:, i] .= 9000.0
         end
 
     end
@@ -283,18 +285,31 @@ end
 function plot_field_sbs(darcy::Darcy_params_2D{T,TI}, truth::AbstractMatrix{T}, approx::AbstractMatrix{T};
     titles::Tuple{String,String}=("Truth", "EKRMLE"), colormap=:magma) where {T<:AbstractFloat,TI<:Int}
 
-    lo = min(minimum(truth), minimum(approx))
-    hi = max(maximum(truth), maximum(approx))
-    clim = (lo, hi)
+    #lo = min(minimum(truth), minimum(approx))
+    #hi = max(maximum(truth), maximum(approx))
+    #clim = (lo, hi)
+
+    lo_truth = minimum(truth)
+    hi_truth = maximum(truth)
+    clim_truth = (lo_truth, hi_truth)
+
+    lo_aprx = minimum(approx)
+    hi_aprx = maximum(approx)
+    clim_aprx = (lo_aprx, hi_aprx)
+
 
     fig = Figure(size=(1200,600))
     ax1 = Axis(fig[1, 1], title=titles[1])
-    ax2 = Axis(fig[1, 2], title=titles[2])
+    ax2 = Axis(fig[1, 3], title=titles[2])
 
-    hm1 = plot_field!(ax1, darcy, truth; colormap=colormap, colorrange=clim)
-    hm2 = plot_field!(ax2, darcy, approx; colormap=colormap, colorrange=clim)
+    #hm1 = plot_field!(ax1, darcy, truth; colormap=colormap, colorrange=clim)
+    #hm2 = plot_field!(ax2, darcy, approx; colormap=colormap, colorrange=clim)
+
+    hm1 = plot_field!(ax1, darcy, truth; colormap=colormap, colorrange=clim_truth)
+    hm2 = plot_field!(ax2, darcy, approx; colormap=colormap, colorrange=clim_aprx)
     
-    Colorbar(fig[:, 3], hm2)
+    Colorbar(fig[:, 2], hm1)
+    Colorbar(fig[:, 4], hm2)
     display(fig)
 end
 
