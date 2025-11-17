@@ -1,5 +1,8 @@
 export Darcy_2D_solver, get_logk_2D, Darcy_params_2D, get_data, KL_expansion_2D, fwd_2D, fwd_RLS_2D, plot_field, plot_field_sbs
 
+# code was adapted, with permission from the author, from: https://github.com/PKU-CMEGroup/InverseProblems.jl/blob/master/Fluid/Darcy-2D.jl
+
+
 mutable struct Darcy_params_2D{T<:AbstractFloat, TI<:Int}
     # Discretization
     Nₓ::TI # mesh size
@@ -257,7 +260,7 @@ function plot_field(darcy::Darcy_params_2D{T, TI}, u::Array{T, 2}, obs::Bool=fal
     N = darcy.Nₓ
     X = darcy.X
 
-    fig = Figure(size = (800,800))
+    fig = Figure(size = (600,600))
     ax = Axis(fig[1,1], title = "log field")
 
     XX, YY = repeat(X, 1, N), repeat(X, 1, N)'
@@ -271,7 +274,7 @@ function plot_field(darcy::Darcy_params_2D{T, TI}, u::Array{T, 2}, obs::Bool=fal
         scatter!(ax, x_pts, y_pts; color=:black, markersize = 15)
     end
 
-    display(fig)
+    return (fig, ax)
 
 end
 

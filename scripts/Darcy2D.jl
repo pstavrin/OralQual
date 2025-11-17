@@ -7,11 +7,11 @@ using SparseArrays
 
 
 ## Setup
-N, L = 50, 1.0
-obs_ΔN = 3
+N, L = 80, 1.0
+obs_ΔN = 8
 α = 2.0
 τ = 10.0
-N_KL = 16
+N_KL = 8
 σ₀ = 1.0
 d = N_KL
 noise_level = 0.05 # 5% of output
@@ -27,9 +27,19 @@ for i = 1:darcy.n
 end
 Γ = Array(Diagonal(fill(1.0, length(y))))
 
-## Plot truth and solution
-plot_field(darcy, darcy.logk_2d, false)
-plot_field(darcy, h, true)
+## Plot truth
+fig, ax = plot_field(darcy, darcy.logk_2d, false)
+ax.title = L"\log(a(𝐰;\textbf{v}_{\text{truth}}))"
+ax.titlesize = 40
+display(fig)
+#save("plots/Darcy_2D_truth.pdf",fig)
+
+## Plot solution
+fig, ax = plot_field(darcy, h, true)
+ax.title = L"p(𝐰)"
+ax.titlesize = 40
+display(fig)
+#save("plots/Darcy_2D_p.pdf",fig)
 
 
 ## EKRMLE
@@ -53,16 +63,23 @@ EKRMLE_run!(ekrmleobj, darcy, fwd_RLS_single, steps)
 ## Plot EKRMLE field
 μ = vec(mean(ekrmleobj.V[end],dims=2))
 logk_EKRMLE = get_logk_2D(darcy, μ)
-plot_field(darcy, logk_EKRMLE, false)
+fig, ax = plot_field(darcy, logk_EKRMLE, false)
+ax.title = L"\log(a(𝐰;\text{E}[𝐯^{(1:J)}_{\text{end}}] ))"
+ax.titlesize = 40
+display(fig)
+save("plots/Darcy_2D_ekrmle.pdf",fig)
 
 ## Compare with ground truth
 plot_field_sbs(darcy, darcy.logk_2d, logk_EKRMLE)
 
 ## Plot error
-plot_field(darcy, abs.(darcy.logk_2d - logk_EKRMLE))
-
+fig, ax = plot_field(darcy, abs.(darcy.logk_2d - logk_EKRMLE))
+ax.title = L"\text{Absolute error}"
+ax.titlesize = 40
+display(fig)
+save("plots/Darcy_2D_error.pdf",fig)
 ## Plot some marginals
-m1 = 3
+m1 = 5
 m2 = 10
 burn_in = Int(1.8e6)
 burn_out = Int(2e6)
