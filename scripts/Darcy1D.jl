@@ -4,15 +4,16 @@ using Distributions
 using Random
 using CairoMakie
 using LinearAlgebra
+using ColorSchemes
 
 ## Setup
 N, L = 256, 1.0
-Nₖ = 10
+Nₖ = 16
 d = Nₖ
 Δ_obs = 5
 σ = 0.1
-α = 1.0
-τ = 4.0
+α = 2.0
+τ = 10.0
 darcy = Darcy_params(N,L,Nₖ,Δ_obs,d,α,τ)
 𝛉 = darcy.θ_true
 logK = darcy.logk
@@ -28,20 +29,21 @@ for i = 1 : n
     y[i] += rand(Normal(0,σ^2))
 end
 
-
+## Plot log field
+colors = [get(ColorSchemes.magma, t) for t in range(0, stop=1, length=5)]
 fig = Figure(size=(900,600))
 ax = Axis(fig[1,1], xlabel="x", ylabel="", title="log permiability")
-lines!(ax, X, logK; linewidth=4, linestyle=:solid)
+lines!(ax, X, logK; linewidth=7, linestyle=:solid, color=colors[2])
 
 display(fig)
 #save(joinpath("plots", "log_field.svg"), fig)
 
 
-
+## Plot solution and measurements
 fig = Figure(size=(900,600))
 ax = Axis(fig[1,1], xlabel="x", ylabel="", title="Data")
-lines!(ax, X, sol; linewidth=4, linestyle=:solid, label="True")
-scatter!(ax, X[y_locs], y, color=:black, markersize=15, label="y")
+lines!(ax, X, sol; linewidth=7, linestyle=:solid, label="True", color=colors[2])
+scatter!(ax, X[y_locs], y, markersize=20, label="y", color=colors[4])
 
 display(fig)
 #save(joinpath("plots", "Darcy_data.svg"), fig)
@@ -71,11 +73,11 @@ EKRMLE_run!(ekrmleobj, darcy, fwd_RLS_single, steps)
 μ = vec(mean(ekrmleobj.V[end],dims=2))
 logk_ens = get_logk(darcy, μ)
 
-fig = Figure(size=(900,600))
+fig = Figure(size=(900,450))
 ax = Axis(fig[1,1], xlabel="x", ylabel="", title="log permiability")
-lines!(ax, X, logK; linewidth=6, linestyle=:solid, label="Truth")
-lines!(ax, X, logk_ens[:]; linewidth=6, linestyle=:dash, label="EKRMLE")
-axislegend(ax; position=:lb, labelsize=20, framevisible=false)
+lines!(ax, X, logK; linewidth=10, linestyle=:solid, label=L"\log(a(𝐰;𝐯_\text{truth}))", color=colors[2])
+lines!(ax, X, logk_ens[:]; linewidth=9, linestyle=:dash, label=L"\log(a(𝐰;\text{E}[𝐯^{(1:J)}_{\text{end}}] ))", color=colors[4])
+axislegend(ax; position=:rb, labelsize=35, framevisible=false)
 display(fig)
 #save(joinpath("plots", "Darcy_EKRMLE.svg"), fig)
 
@@ -127,23 +129,23 @@ MCMC_iters = 2000000
 V_MCMC = RWMH(darcy, log_lik, vMC₀, MCMC_iters)
 
 
-##
+## plot vs MCMC
 burn_in = Int(1.8e6)
 μ_MCMC = vec(mean(V_MCMC[:,burn_in:end],dims=2))
 logk_MCMC = get_logk(darcy, μ_MCMC)
-
-fig = Figure(size=(900,600))
+colors = [get(ColorSchemes.magma, t) for t in range(0, stop=1, length=8)]
+fig = Figure(size=(900,400))
 ax = Axis(fig[1,1], xlabel="x", ylabel="", title="log permiability")
-lines!(ax, X, logK; linewidth=6, linestyle=:solid, label="True")
-lines!(ax, X, logk_ens[:]; linewidth=6, linestyle=:dash, label="EKRMLE")
-lines!(ax, X, logk_MCMC[:]; linewidth=7, linestyle=:dot, label="RWMH")
-axislegend(ax; position=:rb, labelsize=20, framevisible=false)
+lines!(ax, X, logK; linewidth=10, linestyle=:solid, label=L"\log(a(𝐰;𝐯_\text{truth}))", color=colors[3])
+lines!(ax, X, logk_ens[:]; linewidth=9, linestyle=:dash, label=L"\log(a(𝐰;𝐯_\text{EKRMLE}))", color=colors[5])
+lines!(ax, X, logk_MCMC[:]; linewidth=9, linestyle=:dot, label=L"\log(a(𝐰;𝐯_\text{RWMH}))", color=colors[7])
+axislegend(ax; position=:lt, labelsize=35, framevisible=false)
 display(fig)
 #save(joinpath("plots", "Darcy_EKRMLE_RWMH.svg"), fig)
 
 ## Plot some marginals
-m1 = 3
-m2 = 2
+m1 = 5
+m2 = 11
 burn_in = Int(1.8e6)
 burn_out = Int(2e6)
 V_marg = ekrmleobj.V[end][[m1,m2],:]
@@ -151,10 +153,10 @@ MCMC_marg = V_MCMC[[m1,m2],burn_in:burn_out]
 
 fig = Figure(size=(900,600))
 ax = Axis(fig[1,1], xlabel="", ylabel="", title="marginals")
-scatter!(ax, V_marg[1,:], V_marg[2,:]; markersize=15, label="EKRMLE")
-scatter!(ax, MCMC_marg[1,:], MCMC_marg[2,:]; markersize=15, marker=:cross ,label = "RWMH")
+scatter!(ax, V_marg[1,:], V_marg[2,:]; markersize=20, label="EKRMLE", color=(colors[3], 0.20))
+scatter!(ax, MCMC_marg[1,:], MCMC_marg[2,:]; markersize=10,label = "RWMH", color=(colors[6], 0.05))
 
-axislegend(ax; position=:rb, framevisible = false, labelsize=20)
+axislegend(ax; position=:rb, framevisible = false, labelsize=35)
 
 display(fig)
 #save(joinpath("plots", "Darcy_marginals.png"), fig)

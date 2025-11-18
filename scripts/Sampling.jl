@@ -8,13 +8,13 @@ using LinearAlgebra
 ## Setup
 
 
-function ℋ(v₁,v₂) # Donut
-    return (v₁^2+v₂^2-25)^2
+function ℋ(v₁,v₂) # Banana Distribution
+    return (1)*(v₂) - (1/2)*(v₁)^2
 end
 
 
-function ℋ(v₁,v₂) # Banana Distribution
-    return (1)*(v₂) - (1/2)*(v₁)^2
+function ℋ(v₁,v₂) # Donut
+    return (v₁^2+v₂^2-25)^2
 end
 
 
@@ -28,8 +28,8 @@ end
 y = [0.0]
 Γ = (1/2)*I(1)
 J = 5000
-steps = 500
-V₀ = init_rect(J; x1=-7,x2=10,y1=-10,y2=15)
+steps = 100
+V₀ = init_rect(J; x1=-10,x2=5,y1=-10,y2=10)
 ekrmleobj = EKRMLEObj(V₀, y, Γ)
 H_single(::Nothing,v::AbstractVector) = [ℋ(v[1],v[2])]
 EKRMLE_run!(ekrmleobj, nothing, H_single, steps)
@@ -40,9 +40,9 @@ fig = Figure(size = (600, 600))
 ax = Axis(fig[1, 1]; title="Ensemble start", xlabel="v₁", ylabel="v₂")
 
 # ---- Contours of ℋ over data extents (+ padding) ----
-padx = 0.2; pady = 0
-ys = range(minimum(V₀[1,:]) - padx, maximum(V₀[1,:]) + padx; length=400)  # x from V[1,...]
-xs = range(minimum(V₀[2,:]) - pady, maximum(V₀[2,:]) + pady; length=400)  # y from V[2,...]
+padx = 0.2; pady = 0.2
+ys = range(minimum(V[1,:]) - padx, maximum(V[1,:]) + padx; length=400)  # x from V[1,...]
+xs = range(minimum(V[2,:]) - pady, maximum(V[2,:]) + pady; length=400)  # y from V[2,...]
 
 # Makie expects Z as (length(ys), length(xs)) and ℋ(x,y)
 Z = [exp.(-ℋ(y, x).^2) for y in ys, x in xs]
@@ -54,8 +54,43 @@ Z = [exp.(-ℋ(y, x).^2) for y in ys, x in xs]
 levels = [1e-4, 1e-3, 1e-2, 1e-1, 1, 2, 5, 10, 50 ,100]
 contour!(ax, ys, xs, Z; levels=levels, linewidth=4, color=:black)
 
-scatter!(ax, V[1,:], V[2,:], markersize = 10, color = (:blue,0.1))
+scatter!(ax, V[1,:], V[2,:], markersize = 10, color = (:blue,0.2))
 #scatter!(ax, mean(V[1,:]), mean(V[2,:]), markersize=20)
 display(fig)
 
+
+## Now use final ensemble as starting ensemble
+
+
+function ℋ(v₁,v₂) # Donut
+    return (v₁^2+v₂^2-9)^2
+end
+
+ekrmleobj = EKRMLEObj(V, y, Γ)
+H_single(::Nothing,v::AbstractVector) = [ℋ(v[1],v[2])]
+EKRMLE_run!(ekrmleobj, nothing, H_single, steps)
+
+## Plots
+V = ekrmleobj.V[end]
+fig = Figure(size = (600, 600))
+ax = Axis(fig[1, 1]; title="Ensemble start", xlabel="v₁", ylabel="v₂")
+
+# ---- Contours of ℋ over data extents (+ padding) ----
+padx = 0.2; pady = 0.2
+ys = range(minimum(V[1,:]) - padx, maximum(V[1,:]) + padx; length=400)  # x from V[1,...]
+xs = range(minimum(V[2,:]) - pady, maximum(V[2,:]) + pady; length=400)  # y from V[2,...]
+
+# Makie expects Z as (length(ys), length(xs)) and ℋ(x,y)
+Z = [exp.(-ℋ(y, x).^2) for y in ys, x in xs]
+
+# Try auto levels first to ensure something shows up
+#contour!(ax, xs, ys, Z; levels=10, linewidth=1.5, color=:gray)
+
+# If you want explicit levels later:
+levels = [1e-4, 1e-3, 1e-2, 1e-1, 1, 2, 5, 10, 50 ,100]
+contour!(ax, ys, xs, Z; levels=levels, linewidth=4, color=:black)
+
+scatter!(ax, V[1,:], V[2,:], markersize = 10, color = (:blue,0.2))
+#scatter!(ax, mean(V[1,:]), mean(V[2,:]), markersize=20)
+display(fig)
 
