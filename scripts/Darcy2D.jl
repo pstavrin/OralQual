@@ -55,7 +55,7 @@ y_RLS = vcat(Vector{Float64}(y), zeros(Float64, d))
 J = 500
 v₀ = rand(d, J)
 ekrmleobj = EKRMLEObj(v₀, y_RLS, Γ_RLS)
-fwd_RLS_single(darcy, v) = fwd_RLS_2D(darcy, v)
+fwd_RLS_single(darcy, v::AbstractVector) = fwd_RLS_2D(darcy, v)
 steps = 25
 EKRMLE_run!(ekrmleobj, darcy, fwd_RLS_single, steps)
 
@@ -67,7 +67,7 @@ fig, ax = plot_field(darcy, logk_EKRMLE, false)
 ax.title = L"\log(a(𝐰;\text{E}[𝐯^{(1:J)}_{\text{end}}] ))"
 ax.titlesize = 40
 display(fig)
-save("plots/Darcy_2D_ekrmle.pdf",fig)
+#save("plots/Darcy_2D_ekrmle.pdf",fig)
 
 ## Compare with ground truth
 plot_field_sbs(darcy, darcy.logk_2d, logk_EKRMLE)
@@ -77,7 +77,7 @@ fig, ax = plot_field(darcy, abs.(darcy.logk_2d - logk_EKRMLE))
 ax.title = L"\text{Absolute error}"
 ax.titlesize = 40
 display(fig)
-save("plots/Darcy_2D_error.pdf",fig)
+#save("plots/Darcy_2D_error.pdf",fig)
 ## Plot some marginals
 m1 = 5
 m2 = 10

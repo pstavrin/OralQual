@@ -177,6 +177,49 @@ function EKRMLE_step!(obj::EKRMLEObj{T}, Hens::Function) where {T<:AbstractFloat
 
 end
 
+
+function EKRMLE_step_stoch!(obj::EKRMLEObj{T}, Hens::Function) where {T<:AbstractFloat}
+    # Current ensemble and forward evaluation
+    V = obj.V[end]
+    O = Hens(V)
+    
+    # Covariances
+    Chh = _samplecov(O)
+    Cvh = _samplecrosscov(V, O)
+
+    # Compute Kalman gain
+    A = Chh + obj.Γ
+    AL = cholesky(A; check=false)
+    n = size(O, 1)
+    #K = Cvh*(AL \ I(n))
+    K = Cvh/A
+
+    # Residuals
+    Θ = obj.Yrand .- O
+
+    # Fresh Gaussian noise
+    J = size(Θ, 2)
+    𝛆 = MvNormal(Symmetric(Matrix{T}(obj.Γ)))
+    @inbounds for j = 1:J
+        Θ[:, j] .+= rand(𝛆)
+    end
+
+    # Update ensemble
+    Vnew = similar(V)
+    @inbounds for j = 1:obj.J
+        Vnew[:, j] = view(V, :, j) .+ K * view(Θ, :, j)
+    end
+
+    # push changes
+    push!(obj.V, Vnew)
+    push!(obj.Ohist, O)
+    obj.iters += 1
+
+    return nothing
+
+end
+
+
 """
     EKRMLE_run!(obj, params, H, N_iters) -> EKRMLEObj
 
@@ -218,7 +261,8 @@ Run EKRMLE (Algorithm 2) for `N_iters` iterations **in place** on `obj`.
 function EKRMLE_run!(obj::EKRMLEObj{T}, params, H::Function, N_iters::TI) where {T<:AbstractFloat, TI<:Int}
     Hens = V -> H_ens(params, V, H)
     for _ in 1:N_iters
-        EKRMLE_step!(obj, Hens)
+        #EKRMLE_step!(obj, Hens)
+        EKRMLE_step_stoch!(obj, Hens)
     end
     return obj
 end

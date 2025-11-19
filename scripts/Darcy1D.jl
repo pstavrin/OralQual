@@ -8,12 +8,12 @@ using ColorSchemes
 
 ## Setup
 N, L = 256, 1.0
-Nₖ = 16
+Nₖ = 8
 d = Nₖ
-Δ_obs = 5
+Δ_obs = 8
 σ = 0.1
 α = 2.0
-τ = 10.0
+τ = 5.0
 darcy = Darcy_params(N,L,Nₖ,Δ_obs,d,α,τ)
 𝛉 = darcy.θ_true
 logK = darcy.logk
@@ -144,8 +144,8 @@ display(fig)
 #save(joinpath("plots", "Darcy_EKRMLE_RWMH.svg"), fig)
 
 ## Plot some marginals
-m1 = 5
-m2 = 11
+m1 = 1
+m2 = 7
 burn_in = Int(1.8e6)
 burn_out = Int(2e6)
 V_marg = ekrmleobj.V[end][[m1,m2],:]
