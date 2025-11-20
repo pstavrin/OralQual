@@ -261,8 +261,8 @@ Run EKRMLE (Algorithm 2) for `N_iters` iterations **in place** on `obj`.
 function EKRMLE_run!(obj::EKRMLEObj{T}, params, H::Function, N_iters::TI) where {T<:AbstractFloat, TI<:Int}
     Hens = V -> H_ens(params, V, H)
     for _ in 1:N_iters
-        #EKRMLE_step!(obj, Hens)
-        EKRMLE_step_stoch!(obj, Hens)
+        EKRMLE_step!(obj, Hens)
+        #EKRMLE_step_stoch!(obj, Hens)
     end
     return obj
 end

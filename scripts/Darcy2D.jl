@@ -11,7 +11,7 @@ N, L = 80, 1.0
 obs_ΔN = 8
 α = 2.0
 τ = 10.0
-N_KL = 8
+N_KL = 10
 σ₀ = 1.0
 d = N_KL
 noise_level = 0.05 # 5% of output
@@ -33,6 +33,7 @@ ax.title = L"\log(a(𝐰;\textbf{v}_{\text{truth}}))"
 ax.titlesize = 40
 display(fig)
 #save("plots/Darcy_2D_truth.pdf",fig)
+save("plots/Darcy_2D_truth.svg",fig)
 
 ## Plot solution
 fig, ax = plot_field(darcy, h, true)
@@ -40,6 +41,7 @@ ax.title = L"p(𝐰)"
 ax.titlesize = 40
 display(fig)
 #save("plots/Darcy_2D_p.pdf",fig)
+save("plots/Darcy_2D_p.svg",fig)
 
 
 ## EKRMLE
@@ -68,6 +70,7 @@ ax.title = L"\log(a(𝐰;\text{E}[𝐯^{(1:J)}_{\text{end}}] ))"
 ax.titlesize = 40
 display(fig)
 #save("plots/Darcy_2D_ekrmle.pdf",fig)
+save("plots/Darcy_2D_ekrmle.svg",fig)
 
 ## Compare with ground truth
 plot_field_sbs(darcy, darcy.logk_2d, logk_EKRMLE)
@@ -78,6 +81,7 @@ ax.title = L"\text{Absolute error}"
 ax.titlesize = 40
 display(fig)
 #save("plots/Darcy_2D_error.pdf",fig)
+save("plots/Darcy_2D_error.svg",fig)
 ## Plot some marginals
 m1 = 5
 m2 = 10

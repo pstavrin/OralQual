@@ -8,12 +8,12 @@ using ColorSchemes
 
 ## Setup
 N, L = 256, 1.0
-Nₖ = 8
+Nₖ = 32
 d = Nₖ
-Δ_obs = 8
+Δ_obs = 5
 σ = 0.1
 α = 2.0
-τ = 5.0
+τ = 10.0
 darcy = Darcy_params(N,L,Nₖ,Δ_obs,d,α,τ)
 𝛉 = darcy.θ_true
 logK = darcy.logk
@@ -139,7 +139,7 @@ ax = Axis(fig[1,1], xlabel="x", ylabel="", title="log permiability")
 lines!(ax, X, logK; linewidth=10, linestyle=:solid, label=L"\log(a(𝐰;𝐯_\text{truth}))", color=colors[3])
 lines!(ax, X, logk_ens[:]; linewidth=9, linestyle=:dash, label=L"\log(a(𝐰;𝐯_\text{EKRMLE}))", color=colors[5])
 lines!(ax, X, logk_MCMC[:]; linewidth=9, linestyle=:dot, label=L"\log(a(𝐰;𝐯_\text{RWMH}))", color=colors[7])
-axislegend(ax; position=:lt, labelsize=35, framevisible=false)
+axislegend(ax; position=:rb, labelsize=35, framevisible=false)
 display(fig)
 #save(joinpath("plots", "Darcy_EKRMLE_RWMH.svg"), fig)
 
