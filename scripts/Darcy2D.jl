@@ -4,6 +4,10 @@ using Random
 using CairoMakie
 using Distributions
 using SparseArrays
+using ColorSchemes
+using EnsembleKalmanProcesses
+using EnsembleKalmanProcesses.ParameterDistributions
+const EKP = EnsembleKalmanProcesses
 
 
 ## Setup
@@ -11,7 +15,7 @@ N, L = 80, 1.0
 obs_ΔN = 8
 α = 2.0
 τ = 10.0
-N_KL = 10
+N_KL = 128
 σ₀ = 1.0
 d = N_KL
 noise_level = 0.05 # 5% of output
@@ -33,7 +37,7 @@ ax.title = L"\log(a(𝐰;\textbf{v}_{\text{truth}}))"
 ax.titlesize = 40
 display(fig)
 #save("plots/Darcy_2D_truth.pdf",fig)
-save("plots/Darcy_2D_truth.svg",fig)
+#save("plots/Darcy_2D_truth.svg",fig)
 
 ## Plot solution
 fig, ax = plot_field(darcy, h, true)
@@ -41,7 +45,7 @@ ax.title = L"p(𝐰)"
 ax.titlesize = 40
 display(fig)
 #save("plots/Darcy_2D_p.pdf",fig)
-save("plots/Darcy_2D_p.svg",fig)
+#save("plots/Darcy_2D_p.svg",fig)
 
 
 ## EKRMLE
@@ -70,30 +74,66 @@ ax.title = L"\log(a(𝐰;\text{E}[𝐯^{(1:J)}_{\text{end}}] ))"
 ax.titlesize = 40
 display(fig)
 #save("plots/Darcy_2D_ekrmle.pdf",fig)
-save("plots/Darcy_2D_ekrmle.svg",fig)
+#save("plots/Darcy_2D_ekrmle.svg",fig)
 
 ## Compare with ground truth
 plot_field_sbs(darcy, darcy.logk_2d, logk_EKRMLE)
 
 ## Plot error
 fig, ax = plot_field(darcy, abs.(darcy.logk_2d - logk_EKRMLE))
-ax.title = L"\text{Absolute error}"
+ax.title = L"\text{Absolute error EKRMLE}"
 ax.titlesize = 40
 display(fig)
 #save("plots/Darcy_2D_error.pdf",fig)
-save("plots/Darcy_2D_error.svg",fig)
+#save("plots/Darcy_2D_error.svg",fig)
+
+
+## EKS
+dist = Parameterized(MvNormal(vec(zeros(1, d)), Symmetric(Γ_pr)))
+constraint = repeat([no_constraint()], d)
+prior = ParameterDistribution(dist, constraint, "v")
+init   = EKP.construct_initial_ensemble(rng, prior, J)
+eksobj = EKP.EnsembleKalmanProcess(init, y, Γ, Sampler(prior))
+for n in 1:steps
+    θ_ens = EKP.get_ϕ_final(prior, eksobj)            # d × J
+    G_ens = [fwd_2D(darcy, θ_ens[:, j]) for j in 1:J]
+    g_ens = hcat(G_ens...)                            # n × J
+    EKP.update_ensemble!(eksobj, g_ens)
+end
+
+
+## EKS log field
+μ_EKS = vec(mean(EKP.get_ϕ_final(prior, eksobj),dims=2))
+logk_EKS = get_logk_2D(darcy, μ_EKS)
+fig, ax = plot_field(darcy, logk_EKS, false)
+ax.title = L"\log(a(𝐰; 𝐯_{\text{EKS}}))"
+ax.titlesize = 40
+display(fig)
+
+##
+plot_field_sbs(darcy, logk_EKRMLE, logk_EKS; titles=("EKRMLE", "EKS"))
+
+## EKS error
+fig, ax = plot_field(darcy, abs.(darcy.logk_2d - logk_EKS))
+ax.title = L"\text{Absolute error EKS}"
+ax.titlesize = 40
+display(fig)
+#save("plots/Darcy_2D_error.pdf",fig)
+#save("plots/Darcy_2D_error.svg",fig)
+
+
+
 ## Plot some marginals
-m1 = 5
-m2 = 10
-burn_in = Int(1.8e6)
-burn_out = Int(2e6)
+colors = [get(ColorSchemes.magma, t) for t in range(0, stop=1, length=5)]
+m1 = 8
+m2 = 5
 V_marg = ekrmleobj.V[end][[m1,m2],:]
-#MCMC_marg = V_MCMC[[m1,m2],burn_in:burn_out]
+EKS_marg = EKP.get_ϕ_final(prior, eksobj)[[m1,m2],:]
 
 fig = Figure(size=(900,600))
 ax = Axis(fig[1,1], xlabel="", ylabel="", title="marginals")
-scatter!(ax, V_marg[1,:], V_marg[2,:]; markersize=15, label="EKRMLE")
-#scatter!(ax, MCMC_marg[1,:], MCMC_marg[2,:]; markersize=15, marker=:cross ,label = "RWMH")
+scatter!(ax, V_marg[1,:], V_marg[2,:]; markersize=15, label="EKRMLE", color=(colors[2], 0.50))
+scatter!(ax, EKS_marg[1,:], EKS_marg[2,:]; markersize=15 ,label = "EKS", color=(colors[4], 0.50))
 
 axislegend(ax; position=:rb, framevisible = false, labelsize=20)
 
