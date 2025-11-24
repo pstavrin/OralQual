@@ -96,8 +96,8 @@ display(fig)
 
 ## compare against black box sampler
 bb_ens = rand(MvNormal(P*prob.v_star, Symmetric(P*prob.pHess*P'+1e-15*I)), J)
-m1 = 1
-m2 = 15
+m1 = 4
+m2 = 1
 bb_marg = bb_ens[[m1,m2],:]
 PV_marg = (P*obj.V[end])[[m1,m2],:]
 

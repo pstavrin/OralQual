@@ -4,6 +4,10 @@ using Random
 using CairoMakie
 using Distributions
 using SparseArrays
+using ColorSchemes
+using EnsembleKalmanProcesses
+using EnsembleKalmanProcesses.ParameterDistributions
+const EKP = EnsembleKalmanProcesses
 
 ## EKS Implementation
 
@@ -100,8 +104,9 @@ function EKS_step!(
 
     D = (1/J)*(E'*(obj.Γ\R)) # Gamma-weighted inner product
 
-    Δt = 100/(norm(D) + 1e-8) # time step
+    Δt = 1/(norm(D) + 1e-8) # time step
     #Δt = 20/(obj.iters+1)
+    #Δt = 0.3
 
     noise = MvNormal(Matrix(Hermitian(Cvv)))
 
@@ -171,12 +176,36 @@ H_RLS = vcat(heat.H, I(d))
 H_RLS_s(::Nothing, v::AbstractVector) = H_RLS * v
 H = heat.H
 H_s(::Nothing, v::AbstractVector) = H * v
-J = 500
+J = 1000
 V0 = rand(d, J)
 #ekrmleobj = EKRMLEObj(V0, y_RLS, Γ_RLS)
 μ_pr = vec(zeros(1, d))
-eksobj = EKSObj(J,μ_pr,Γ_pr,y,100*Γ)
-iters = 25
+
+## EKS straight from the source
+dist = Parameterized(MvNormal(μ_pr, Symmetric(Γ_pr)))
+constraint = repeat([no_constraint()], d)
+
+prior = ParameterDistribution(dist, constraint, "v")
+rng    = MersenneTwister(42)
+J      = 2000
+init   = EKP.construct_initial_ensemble(rng, prior, J)
+eksobj = EKP.EnsembleKalmanProcess(init, y, Γ, Sampler(prior); rng=rng)
+N_iter = 50
+for n in 1:N_iter
+    θ_ens = EKP.get_ϕ_final(prior, eksobj)            # d × J
+    G_ens = [H_s(nothing, θ_ens[:, j]) for j in 1:J]
+    g_ens = hcat(G_ens...)                            # n × J
+    EKP.update_ensemble!(eksobj, g_ens)
+end
+
+
+
+
+
+
+##
+eksobj = EKSObj(J,μ_pr,Γ_pr,y,Γ)
+iters = 100
 #EKRMLE_run!(ekrmleobj, nothing, H_RLS_s, iters)
 EKS_run!(eksobj, nothing, H_s, iters)
 
@@ -186,7 +215,7 @@ Fish = (H'/Γ)*H
 μ_pos = (Γ_pos*H'/Γ)*y
 
 ## 
-C = _samplecov(eksobj.V[end])
+C = _samplecov(EKP.get_ϕ_final(prior, eksobj))
 ## Covariance comparison
 fig = Figure(size=(900,400))
 ax1 = Axis(fig[1, 1], title=L"\text{Cov}[\textbf{v}_\text{end}^{(1:J)}]", titlesize=35)
@@ -202,7 +231,8 @@ display(fig)
 
 ## Mean comparison
 colors = [get(ColorSchemes.magma, t) for t in range(0, stop=1, length=5)]
-μ = _colmean(eksobj.V[end])
+#μ = _colmean(eksobj.V[end])
+μ = EKP.get_ϕ_mean_final(prior, eksobj)
 fig = Figure(size=(900,400))
 ax1 = Axis(fig[1, 1], title = L"\text{Posterior mean comparison}", titlesize=35)
 lines!(ax1, μ_pos; linewidth=7, label=L"𝛍_\text{pos}", color=colors[2])
@@ -211,11 +241,112 @@ axislegend(ax1; position=:rb, framevisible = false, labelsize=35)
 display(fig)
 #save("plots/mean_compare_HE.pdf", fig)
 
+## Compare with black box sampler
+bb_ens = rand(MvNormal(μ_pos, Symmetric(Γ_pos)), J)
+m1 = 12
+m2 = 150
+bb_marg = bb_ens[[m1,m2],:]
+PV_marg = (eksobj.V[end])[[m1,m2],:]
+
+fig = Figure(size=(900,600))
+ax = Axis(fig[1,1], xlabel="", ylabel="", title="RMLE in P-space")
+scatter!(ax, bb_marg[1,:], bb_marg[2,:]; markersize=15, label="black-box", color=(colors[2], 0.30))
+scatter!(ax, PV_marg[1,:], PV_marg[2,:]; markersize=15 ,label = "EKS",  color=(colors[4], 0.30))
+
+axislegend(ax; position=:rb, framevisible = false, labelsize=20)
+
+display(fig)
+
+
+
+## EKS paper, 1st experiment
+function p(x, v::AbstractVector)
+    v1, v2 = v[1], v[2]
+    return v2*x + exp(-v1)*(-((x^2)/2) + x/2)    
+end
+
+function 𝒢(x1, x2, v::AbstractVector)
+    return vcat(p(x1, v),p(x2, v))
+end
+
+function 𝒢reg(x1, x2, v::AbstractVector)
+    return vcat(𝒢(x1, x2, v), v)
+    
+end
+
+# Setup
+const x1, x2 = 1/4, 3/4
+y = [27.5, 79.7]
+d = 2; n = 2;
+Γ = 0.1^2*Matrix{Float64}(I(2))
+σ = 10
+Γ_pr = σ^2*Matrix{Float64}(I(2))
+Γ_RLS = Matrix{Float64}(I(n+d))
+Γ_RLS[1:n, 1:n] .= Matrix{Float64}(Γ)
+Γ_RLS[n+1:end, n+1:end] .= Matrix{Float64}(Γ_pr)
+Γ_RLS = Symmetric(Γ_RLS)
+y_RLS = vcat(Vector{Float64}(y), zeros(Float64, d))
+J = 10000
+V0 = rand(2, J)
+ekrmleobj = EKRMLEObj(V0, y_RLS, Γ_RLS)
+steps = 100
+F_s(::Nothing, v::AbstractVector) =  𝒢reg(x1, x2, v)
+EKRMLE_run!(ekrmleobj, nothing, F_s, steps)
+
+## EKI
+μ_pr = vec(zeros(1, d))
+V0 = rand(MvNormal(μ_pr,Γ_pr),J)
+ekiobj = EKIObj(V0, y_RLS, Γ_RLS, Γ_RLS)
+EKI_run!(ekiobj, nothing, F_s, steps; flavor="vanilla")
+
+## EKS from the source
+FF_s(::Nothing, v::AbstractVector) = 𝒢(x1, x2, v)
+prior = constrained_gaussian("theta", 0.0, σ, -Inf, Inf; repeats=d)
+rng    = MersenneTwister(42)
+J      = 1000
+init   = EKP.construct_initial_ensemble(rng, prior, J)
+eksobj = EKP.EnsembleKalmanProcess(init, y, Γ, Sampler(prior); rng=rng)
+N_iter = 100
+for n in 1:N_iter
+    θ_ens = EKP.get_ϕ_final(prior, eksobj)            # d × J
+    G_ens = [FF_s(nothing, θ_ens[:, j]) for j in 1:J]
+    g_ens = hcat(G_ens...)                            # n × J
+    EKP.update_ensemble!(eksobj, g_ens)
+end
+
+
+
+## EKS
+
+eksobj = EKSObj(J,μ_pr,Γ_pr,y,Γ)
+steps = 50
+FF_s(::Nothing, v::AbstractVector) = 𝒢(x1, x2, v)
+EKS_run!(eksobj, nothing, FF_s, steps)
+
+## Plot
+V = ekrmleobj.V[end]
+V_EKI = ekiobj.V[end]
+V_eks = EKP.get_ϕ_final(prior, eksobj)
+fig = Figure(size=(900,600))
+ax = Axis(fig[1,1], xlabel="", ylabel="", title="")
+scatter!(ax, V_eks[1,:], V_eks[2,:]; markersize=15, label="EKS", color=(colors[3], 0.30))
+scatter!(ax, V[1,:], V[2,:]; markersize=15 ,label = "EKRMLE",  color=(colors[4], 0.20))
+scatter!(ax, V_EKI[1,:], V_EKI[2,:]; markersize=15 ,label = "EKI",  color=(colors[2], 0.30))
+
+axislegend(ax; position=:rb, framevisible = false, labelsize=20)
+
+display(fig)
+
+
+
+
+
+
 
 
 ## Setup 1D darcy
 N, L = 256, 1.0
-Nₖ = 5
+Nₖ = 32
 d = Nₖ
 Δ_obs = 5
 σ = 0.1
@@ -255,6 +386,23 @@ scatter!(ax, X[y_locs], y, markersize=20, label="y", color=colors[4])
 display(fig)
 #save(joinpath("plots", "Darcy_data.svg"), fig)
 
+
+
+## EKS from the source
+Γ = Matrix{Float64}(σ.^2*I(n))
+prior = constrained_gaussian("theta", 0.0, 1.0, -Inf, Inf; repeats=d)
+rng    = MersenneTwister(42)
+J      = 1000
+init   = EKP.construct_initial_ensemble(rng, prior, J)
+eksobj = EKP.EnsembleKalmanProcess(init, y, Γ, Sampler(prior); rng=rng)
+N_iter = 100
+for n in 1:N_iter
+    θ_ens = EKP.get_ϕ_final(prior, eksobj)            # d × J
+    G_ens = [fwd(darcy, θ_ens[:, j]) for j in 1:J]
+    g_ens = hcat(G_ens...)                            # n × J
+    EKP.update_ensemble!(eksobj, g_ens)
+end
+
 ## EKS
 Γ = Matrix{Float64}(σ.^2*I(n))
 Γ_pr = Matrix{Float64}(500*I(d))
@@ -266,7 +414,8 @@ steps = 50
 EKS_run!(eksobj, darcy, fwd_single, steps)
 
 ## Plot EKS solution
-μ = vec(mean(eksobj.V[end],dims=2))
+μ = EKP.get_ϕ_mean_final(prior, eksobj)
+#μ = vec(mean(eksobj.V[end],dims=2))
 #μ = vec(eksobj.V[end][:,30])
 logk_ens = get_logk(darcy, μ)
 

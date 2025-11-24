@@ -12,6 +12,7 @@ using ColorSchemes
 using SparseArrays
 using MAT
 using ControlSystems
+using EnsembleKalmanProcesses
 
 
 
@@ -20,6 +21,7 @@ include("DarcyHelpers1D.jl")
 include("DarcyHelpers2D.jl")
 include("LinearHelpers.jl")
 include("HeatEqHelpers.jl")
+include("EKI.jl")
 
 
 
