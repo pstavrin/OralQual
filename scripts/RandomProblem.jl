@@ -4,6 +4,7 @@ using Random
 using CairoMakie
 using Distributions
 using ColorSchemes
+include("PrettyPlots.jl")
 
 
 @inline colmean(V::AbstractMatrix) = vec(mean(V, dims=2))
@@ -93,6 +94,59 @@ axislegend(ax1; position=:lb, framevisible = false, labelsize=30)
 axislegend(ax2; position=:lb, framevisible = false, labelsize=30)
 display(fig)
 #save("plots/mean_compare.pdf", fig)
+
+
+## PrettyPlot
+colors = my_custom_dark_theme.palette.color[]
+
+fig = themed_figure(; dark=true, size=(1000, 500)) do fig
+    ax1 = Axis(fig[1, 1],
+        title     = L"\text{Full state space }\mathbb{R}^d",
+        titlesize = 30,
+    )
+    ax2 = Axis(fig[2, 1],
+        title     = L"\textbf{P}\text{ space}",
+        titlesize = 30,
+    )
+
+    scatterlines!(ax1, prob.v_star;
+        linewidth   = 5,
+        markersize  = 15,
+        label       = L"\textbf{v}^\star",
+        color       = colors[2],
+    )
+
+    scatterlines!(ax1, μ;
+        linewidth   = 5,
+        linestyle   = :dash,
+        markersize  = 15,
+        label       = L"\text{E}[\textbf{v}_\text{end}^{(1:J)}]",
+        color       = colors[4],
+    )
+
+    scatterlines!(ax2, P * prob.v_star;
+        linewidth   = 5,
+        markersize  = 20,
+        label       = L"\textbf{Pv}^\star",
+        color       = colors[2],
+    )
+
+    scatterlines!(ax2, Pμ;
+        linestyle   = :dash,
+        linewidth   = 4,
+        marker      = :cross,
+        markersize  = 18,
+        label       = L"\text{E}[\textbf{Pv}_\text{end}^{(1:J)}]",
+        color       = colors[4],
+    )
+
+    axislegend(ax1; position=:lb, framevisible=false, labelsize=30)
+    axislegend(ax2; position=:lb, framevisible=false, labelsize=30)
+
+    fig   # important: return the figure from the do-block
+end
+
+
 
 ## compare against black box sampler
 bb_ens = rand(MvNormal(P*prob.v_star, Symmetric(P*prob.pHess*P'+1e-15*I)), J)

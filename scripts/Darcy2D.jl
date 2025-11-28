@@ -15,7 +15,7 @@ N, L = 80, 1.0
 obs_ΔN = 8
 α = 2.0
 τ = 10.0
-N_KL = 128
+N_KL = 32
 σ₀ = 1.0
 d = N_KL
 noise_level = 0.05 # 5% of output
@@ -33,19 +33,19 @@ end
 
 ## Plot truth
 fig, ax = plot_field(darcy, darcy.logk_2d, false)
-ax.title = L"\log(a(𝐰;\textbf{v}_{\text{truth}}))"
+ax.title = L"\log(a(𝐱;\textbf{v}_{\text{truth}}))"
 ax.titlesize = 40
 display(fig)
 #save("plots/Darcy_2D_truth.pdf",fig)
-#save("plots/Darcy_2D_truth.svg",fig)
+save("plots/Darcy_2D_truth.svg",fig)
 
 ## Plot solution
 fig, ax = plot_field(darcy, h, true)
-ax.title = L"p(𝐰)"
+ax.title = L"p(𝐱)"
 ax.titlesize = 40
 display(fig)
 #save("plots/Darcy_2D_p.pdf",fig)
-#save("plots/Darcy_2D_p.svg",fig)
+save("plots/Darcy_2D_p.svg",fig)
 
 
 ## EKRMLE
@@ -70,22 +70,22 @@ EKRMLE_run!(ekrmleobj, darcy, fwd_RLS_single, steps)
 μ = vec(mean(ekrmleobj.V[end],dims=2))
 logk_EKRMLE = get_logk_2D(darcy, μ)
 fig, ax = plot_field(darcy, logk_EKRMLE, false)
-ax.title = L"\log(a(𝐰;\text{E}[𝐯^{(1:J)}_{\text{end}}] ))"
+ax.title = L"\log(a(𝐱;𝐯_{\text{EKRMLE}}))"
 ax.titlesize = 40
 display(fig)
 #save("plots/Darcy_2D_ekrmle.pdf",fig)
-#save("plots/Darcy_2D_ekrmle.svg",fig)
+save("plots/Darcy_2D_ekrmle.svg",fig)
 
 ## Compare with ground truth
 plot_field_sbs(darcy, darcy.logk_2d, logk_EKRMLE)
 
 ## Plot error
 fig, ax = plot_field(darcy, abs.(darcy.logk_2d - logk_EKRMLE))
-ax.title = L"\text{Absolute error EKRMLE}"
+ax.title = L"\text{Absolute error}"
 ax.titlesize = 40
 display(fig)
 #save("plots/Darcy_2D_error.pdf",fig)
-#save("plots/Darcy_2D_error.svg",fig)
+save("plots/Darcy_2D_error.svg",fig)
 
 
 ## EKS
@@ -125,7 +125,7 @@ display(fig)
 
 ## Plot some marginals
 colors = [get(ColorSchemes.magma, t) for t in range(0, stop=1, length=5)]
-m1 = 8
+m1 = 12
 m2 = 5
 V_marg = ekrmleobj.V[end][[m1,m2],:]
 EKS_marg = EKP.get_ϕ_final(prior, eksobj)[[m1,m2],:]
