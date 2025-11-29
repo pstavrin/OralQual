@@ -18,8 +18,8 @@ function _samplecov(V::AbstractMatrix)
 end
 
 ## Setup
-n = 5
-d = 20
+n = 10
+d = 35
 J = 10000
 prob = randomLinearProblemObj(n, d, J)
 
@@ -110,14 +110,14 @@ fig = themed_figure(; dark=true, size=(1000, 500)) do fig
     )
 
     scatterlines!(ax1, prob.v_star;
-        linewidth   = 5,
+        linewidth   = 7,
         markersize  = 15,
         label       = L"\textbf{v}^\star",
         color       = colors[2],
     )
 
     scatterlines!(ax1, μ;
-        linewidth   = 5,
+        linewidth   = 6,
         linestyle   = :dash,
         markersize  = 15,
         label       = L"\text{E}[\textbf{v}_\text{end}^{(1:J)}]",
@@ -125,7 +125,7 @@ fig = themed_figure(; dark=true, size=(1000, 500)) do fig
     )
 
     scatterlines!(ax2, P * prob.v_star;
-        linewidth   = 5,
+        linewidth   = 7,
         markersize  = 20,
         label       = L"\textbf{Pv}^\star",
         color       = colors[2],
@@ -133,7 +133,7 @@ fig = themed_figure(; dark=true, size=(1000, 500)) do fig
 
     scatterlines!(ax2, Pμ;
         linestyle   = :dash,
-        linewidth   = 4,
+        linewidth   = 6,
         marker      = :cross,
         markersize  = 18,
         label       = L"\text{E}[\textbf{Pv}_\text{end}^{(1:J)}]",
@@ -141,7 +141,7 @@ fig = themed_figure(; dark=true, size=(1000, 500)) do fig
     )
 
     axislegend(ax1; position=:lb, framevisible=false, labelsize=30)
-    axislegend(ax2; position=:lb, framevisible=false, labelsize=30)
+    axislegend(ax2; position=:rt, framevisible=false, labelsize=30)
 
     fig   # important: return the figure from the do-block
 end
@@ -149,17 +149,38 @@ end
 
 
 ## compare against black box sampler
-bb_ens = rand(MvNormal(P*prob.v_star, Symmetric(P*prob.pHess*P'+1e-15*I)), J)
-m1 = 4
-m2 = 1
-bb_marg = bb_ens[[m1,m2],:]
-PV_marg = (P*obj.V[end])[[m1,m2],:]
+bb_ens = rand(MvNormal(P*prob.v_star, Symmetric(P*prob.pHess*P' + 1e-15*I)), J)
+m1 = 21
+m2 = 11
 
-fig = Figure(size=(900,600))
-ax = Axis(fig[1,1], xlabel="", ylabel="", title="RMLE in P-space")
-scatter!(ax, bb_marg[1,:], bb_marg[2,:]; markersize=15, label="black-box", color=(colors[2], 0.30))
-scatter!(ax, PV_marg[1,:], PV_marg[2,:]; markersize=15 ,label = "EKRMLE",  color=(colors[4], 0.20))
+bb_marg = bb_ens[[m1, m2], :]
+PV_marg = (P * obj.V[end])[[m1, m2], :]
 
-axislegend(ax; position=:rb, framevisible = false, labelsize=20)
+colors = my_custom_dark_theme.palette.color[]  # your 25-color palette
+
+fig = themed_figure(; dark=true, size=(900, 500)) do fig
+    ax = Axis(fig[1, 1],
+        xlabel = "",
+        ylabel = "",
+        title  = L"\text{RMLE in }𝐏\text{ space}",
+        titlesize = 35,
+    )
+
+    scatter!(ax, bb_marg[1, :], bb_marg[2, :];
+        markersize = 20,
+        label      = L"\text{black box}",
+        color      = (colors[2], 0.30),   # same as before, now under your theme
+    )
+
+    scatter!(ax, PV_marg[1, :], PV_marg[2, :];
+        markersize = 20,
+        label      = L"\text{EKRMLE}",
+        color      = (colors[4], 0.30),
+    )
+
+    axislegend(ax; position=:lb, framevisible=false, labelsize=30)
+
+    fig
+end
 
 display(fig)

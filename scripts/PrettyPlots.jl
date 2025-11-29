@@ -45,9 +45,11 @@ palette_5 = [
 
 # Palette 6: magma
 palette_6 = [
-    "#FEBB81",
+    "#FEBB81", # light orange
     "#D3436E",
-    "#5F187F",
+    "#F8765C",
+    #"#5F187F",
+    "#5DCEAF", # slide green
 ]
 
 # All palettes combined (25 colors total)
@@ -84,8 +86,8 @@ my_custom_dark_theme = Theme(
         framevisible = false,
     ),
     palette = (
-        color = my_custom_dark_colors,
-        patchcolor = my_custom_dark_colors,
+        color = palette_6,
+        patchcolor = palette_6,
     ),
     Lines = (
         cycle = Cycle([:color], covary=true),
