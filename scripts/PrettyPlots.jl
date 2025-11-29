@@ -165,5 +165,5 @@ end
 
 ## Show your custom palette
 palette_colors = my_custom_dark_theme.palette.color[]
-fig = show_palette(palette_colors, title="Custom Theme Color Palette")
-display(fig)
+#fig = show_palette(palette_colors, title="Custom Theme Color Palette")
+#display(fig)
