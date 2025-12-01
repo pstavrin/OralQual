@@ -5,15 +5,16 @@ using Random
 using CairoMakie
 using LinearAlgebra
 using ColorSchemes
+include("PrettyPlots.jl")
 
 ## Setup
 N, L = 256, 1.0
-Nₖ = 32
+Nₖ = 16
 d = Nₖ
-Δ_obs = 5
+Δ_obs = 8
 σ = 0.1
 α = 2.0
-τ = 10.0
+τ = 3.0
 darcy = Darcy_params(N,L,Nₖ,Δ_obs,d,α,τ)
 𝛉 = darcy.θ_true
 logK = darcy.logk
@@ -73,7 +74,7 @@ EKRMLE_run!(ekrmleobj, darcy, fwd_RLS_single, steps)
 μ = vec(mean(ekrmleobj.V[end],dims=2))
 logk_ens = get_logk(darcy, μ)
 
-fig = Figure(size=(900,450))
+fig = Figure(size=(900,400))
 ax = Axis(fig[1,1], xlabel="x", ylabel="", title="log permiability")
 lines!(ax, X, logK; linewidth=10, linestyle=:solid, label=L"\log(a(𝐰;𝐯_\text{truth}))", color=colors[2])
 lines!(ax, X, logk_ens[:]; linewidth=9, linestyle=:dash, label=L"\log(a(𝐰;\text{E}[𝐯^{(1:J)}_{\text{end}}] ))", color=colors[4])

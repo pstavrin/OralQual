@@ -164,6 +164,6 @@ function themed_figure(plot_fn; dark=true, kwargs...)
 end
 
 ## Show your custom palette
-palette_colors = my_custom_dark_theme.palette.color[]
+#palette_colors = my_custom_dark_theme.palette.color[]
 #fig = show_palette(palette_colors, title="Custom Theme Color Palette")
 #display(fig)
