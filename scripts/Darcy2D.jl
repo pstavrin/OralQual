@@ -12,7 +12,7 @@ const EKP = EnsembleKalmanProcesses
 
 ## Setup
 N, L = 80, 1.0
-obs_ΔN = 8
+obs_ΔN = 6
 α = 2.0
 τ = 10.0
 N_KL = 32
@@ -36,16 +36,16 @@ fig, ax = plot_field(darcy, darcy.logk_2d, false)
 ax.title = L"\log(a(𝐱;\textbf{v}_{\text{truth}}))"
 ax.titlesize = 40
 display(fig)
-#save("plots/Darcy_2D_truth.pdf",fig)
-save("plots/Darcy_2D_truth.svg",fig)
+save("plots/Darcy_2D_truth_d32.pdf",fig)
+#save("plots/Darcy_2D_truth.svg",fig)
 
 ## Plot solution
 fig, ax = plot_field(darcy, h, true)
 ax.title = L"p(𝐱)"
 ax.titlesize = 40
 display(fig)
-#save("plots/Darcy_2D_p.pdf",fig)
-save("plots/Darcy_2D_p.svg",fig)
+save("plots/Darcy_2D_p.pdf",fig)
+#save("plots/Darcy_2D_p.svg",fig)
 
 
 ## EKRMLE
@@ -73,8 +73,8 @@ fig, ax = plot_field(darcy, logk_EKRMLE, false)
 ax.title = L"\log(a(𝐱;𝐯_{\text{EKRMLE}}))"
 ax.titlesize = 40
 display(fig)
-#save("plots/Darcy_2D_ekrmle.pdf",fig)
-save("plots/Darcy_2D_ekrmle.svg",fig)
+save("plots/Darcy_2D_ekrmle_d32.pdf",fig)
+#save("plots/Darcy_2D_ekrmle.svg",fig)
 
 ## Compare with ground truth
 plot_field_sbs(darcy, darcy.logk_2d, logk_EKRMLE)
@@ -84,8 +84,8 @@ fig, ax = plot_field(darcy, abs.(darcy.logk_2d - logk_EKRMLE))
 ax.title = L"\text{Absolute error}"
 ax.titlesize = 40
 display(fig)
-#save("plots/Darcy_2D_error.pdf",fig)
-save("plots/Darcy_2D_error.svg",fig)
+save("plots/Darcy_2D_error_d32.pdf",fig)
+#save("plots/Darcy_2D_error.svg",fig)
 
 
 ## EKS
