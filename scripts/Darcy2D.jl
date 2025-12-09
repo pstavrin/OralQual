@@ -12,10 +12,10 @@ const EKP = EnsembleKalmanProcesses
 
 ## Setup
 N, L = 80, 1.0
-obs_ΔN = 6
+obs_ΔN = 8
 α = 2.0
 τ = 10.0
-N_KL = 32
+N_KL = 8
 σ₀ = 1.0
 d = N_KL
 noise_level = 0.05 # 5% of output
