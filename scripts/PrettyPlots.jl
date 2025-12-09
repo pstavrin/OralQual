@@ -48,6 +48,7 @@ palette_6 = [
     "#FEBB81", # light orange
     "#D3436E",
     "#F8765C",
+    "#51127C",
     #"#5F187F",
     "#5DCEAF", # slide green
 ]

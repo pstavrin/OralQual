@@ -8,6 +8,7 @@ using ColorSchemes
 using EnsembleKalmanProcesses
 using EnsembleKalmanProcesses.ParameterDistributions
 const EKP = EnsembleKalmanProcesses
+include("PrettyPlots.jl")
 
 
 ## Setup
@@ -15,7 +16,7 @@ N, L = 80, 1.0
 obs_ΔN = 8
 α = 2.0
 τ = 10.0
-N_KL = 8
+N_KL = 32
 σ₀ = 1.0
 d = N_KL
 noise_level = 0.05 # 5% of output
@@ -44,7 +45,7 @@ fig, ax = plot_field(darcy, h, true)
 ax.title = L"p(𝐱)"
 ax.titlesize = 40
 display(fig)
-save("plots/Darcy_2D_p.pdf",fig)
+#save("plots/Darcy_2D_p_manypoints.pdf",fig)
 #save("plots/Darcy_2D_p.svg",fig)
 
 
@@ -86,6 +87,55 @@ ax.titlesize = 40
 display(fig)
 save("plots/Darcy_2D_error_d32.pdf",fig)
 #save("plots/Darcy_2D_error.svg",fig)
+
+
+## Uncertainty plot
+σ = sqrt.(diag(_samplecov(ekrmleobj.V[end])))   # or however you compute it
+upper = μ .+ 2 .* σ
+lower = μ .- 2 .* σ
+colors = my_custom_dark_theme.palette.color[]
+
+fig = themed_figure(; dark=false, size=(1200, 300)) do fig
+    ax1 = Axis(fig[1, 1],
+        title     = L"\text{Uncertainty quantification } (d=32)",
+        titlesize = 40,
+    )
+
+    band!(ax1, 1:length(μ), lower, upper;
+        color = (colors[3], 0.20), 
+        label = L"\pm 2\sigma",
+    )
+
+    scatterlines!(ax1, darcy.θ_true;
+        linewidth   = 8,
+        markersize  = 15,
+        label       = L"𝐯_\text{truth}",
+        color       = colors[4],
+    )
+
+    scatterlines!(ax1, μ;
+        linewidth   = 7,
+        linestyle   = :dash,
+        markersize  = 15,
+        label       = L"𝐯_\text{EKRMLE}",
+        color       = colors[3],
+    )
+
+    legend = Legend(fig, ax1; framevisible=false, labelsize=40)
+
+    fig[1, 2] = legend    # <-- place legend in separate column
+
+    colsize!(fig.layout, 2, Auto())   # auto-size legend column
+
+    #axislegend(ax1; position=:rb, framevisible=false, labelsize=35)
+    fig   # important: return the figure from the do-block
+end
+
+save("plots/Darcy_2D_d32_uncertain.pdf",fig)
+
+
+
+
 
 
 ## EKS
