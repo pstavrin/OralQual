@@ -13,6 +13,8 @@ using SparseArrays
 using MAT
 using ControlSystems
 using EnsembleKalmanProcesses
+using StatsBase
+using KernelDensity
 
 
 
