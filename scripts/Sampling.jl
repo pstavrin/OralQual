@@ -6,7 +6,7 @@ using CairoMakie
 using LinearAlgebra
 using StatsBase
 using KernelDensity
-
+using Flux
 ## Setup
 
 
@@ -25,9 +25,6 @@ end
 
 
 
-function ℋ(v₁,v₂) # Donut
-    return (v₁^2+v₂^2-25)^2
-end
 
 
 
@@ -52,10 +49,6 @@ end
 
 
 
-function ℋ(v₁,v₂) # sin Distribution
-    β = 5
-    return [v₁^2, v₂ - β*sin(π*v₁)]
-end
 
 
 
@@ -74,6 +67,33 @@ function ℋ(v₁,v₂) # Banana Distribution
 end
 
 
+
+function ℋ(v₁,v₂) # split Distribution
+    δ = 20
+    κ = 1/20
+    return [v₁ - δ*tanh(κ*v₁), v₂]
+end
+
+
+
+function ℋ(v₁,v₂) # Donut
+    return (v₁^2+v₂^2-49)^2
+end
+
+
+function ℋ(v₁,v₂) # sin Distribution
+    A = 1/2
+    ω = π
+    return [v₁, v₂ - A*sin(ω*v₁)]
+end
+
+function ℋ(v₁,v₂,v₃) # sin/banana mix Distribution
+    A = 1/2
+    ω = π
+    β = 0.9
+    return [v₁, v₂ - A*sin(ω*v₁), v₃ - β*(v₁^2-1)]
+end
+
 function init_rect(J; x1=-1,x2=1,y1=-2,y2=2)
     x = x1 .+ (x2-x1) .*rand(J)
     y = y1 .+ (y2-y1) .*rand(J)
@@ -81,18 +101,18 @@ function init_rect(J; x1=-1,x2=1,y1=-2,y2=2)
     
 end
 
-y = [0.0,0.0]
-Γ = (1/1)*I(2)
-J = 500_000
-steps = 50
-#V₀ = init_rect(J; x1=-10,x2=10,y1=-3,y2=5)
-V₀ = randn(2,J)
+y = [0.0,0.0,0.0]
+Γ = (1/1)*I(3)
+J = 200_000
+steps = 100
+#V₀ = init_rect(J; x1=-8,x2=10,y1=-5,y2=10)
+V₀ = randn(3,J)
 ekrmleobj = EKRMLEObj(V₀, y, Γ)
-H_single(::Nothing,v::AbstractVector) = ℋ(v[1],v[2])
+H_single(::Nothing,v::AbstractVector) = ℋ(v[1],v[2],v[3])
 EKRMLE_run!(ekrmleobj, nothing, H_single, steps)
 
 ## Plots
-V = ekrmleobj.V[end]
+V = ekrmleobj.V[end][[1,2],:]
 fig = Figure(size = (600, 600))
 ax = Axis(fig[1, 1]; title="Ensemble start", xlabel="v₁", ylabel="v₂")
 
@@ -110,14 +130,17 @@ ys = range(-22,7,1000)
 #ρ(x, y) = (2*sqrt(100))*ϕ(sqrt(2)*(-x+1))*ϕ(sqrt(2*100)*(y-x^2))
 s = 2
 #ρ(x, y) = (1/(2*pi))*exp(-(x^2)/2)*exp(-s*x/2)*exp(-0.5*(y^2)*exp(-s*x))
+A = 1/2; ω = (1)*π;
+ρ(x, y) = (1/(2π))*exp(-0.5*x^2 - 0.5*(y-A*sin(ω*x))^2)
+#ρ(x, y) = exp(-(x^2+y^2-25)^2)
 Z = [ρ(x, y) for x in xs, y in ys]
 
 # Try auto levels first to ensure something shows up
 #contour!(ax, xs, ys, Z; levels=10, linewidth=1.5, color=:gray)
 
-Zlog = log10.(Z .+ 1e-300)   # avoid -Inf
+Zlog = log10.(Z .+ 1e-300)
 heatmap!(ax, xs, ys, Zlog;
-    colormap = :magma,       # or :viridis, :plasma, etc.
+    colormap = :magma,
     colorrange = (-8, 0),
     interpolate = true
 )
@@ -135,7 +158,7 @@ contour!(ax, xs, ys, Z; levels=levels, linewidth=2.5, color="#51127C")
 
 display(fig)
 ##
-V = ekrmleobj.V[end]
+V = ekrmleobj.V[end][[1,3],:]
 xv = V[1, :]
 yv = V[2, :]
 
@@ -193,3 +216,34 @@ hidespines!(ax)
 
 fig
 
+##
+
+function make_two_moons(N::Int; noise::Float64=0.06, rng=Random.default_rng())
+    # Classic two moons in R^2
+    # Moon A: (cos t, sin t)
+    # Moon B: (1 - cos t, 1 - sin t - 0.5)
+    t = 2π .* rand(rng, N)
+    moonA = hcat(cos.(t), sin.(t))
+    moonB = hcat(1 .- cos.(t), 1 .- sin.(t) .- 0.5)
+    X = vcat(moonA, moonB)
+    X .+= noise .* randn(rng, size(X))
+    return X
+end
+
+function make_map()
+    # Keep it small & smooth; tanh is fine
+    Chain(
+        Dense(2, 32, tanh),
+        Dense(32, 32, tanh),
+        Dense(32, 2)
+    )
+end
+
+base_model = make_map()
+θ0, re = Flux.destructure(base_model)  # θ0 is a Vector{Float32} by default
+θ0 = Float64.(θ0)                      # use Float64 for linear algebra stability
+
+X = make_two_moons(100; noise=0.06)
+X = Float64.(X)
+Y = vec(X)
+n = length(Y)

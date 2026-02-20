@@ -15,6 +15,7 @@ using ControlSystems
 using EnsembleKalmanProcesses
 using StatsBase
 using KernelDensity
+using Flux
 
 
 
