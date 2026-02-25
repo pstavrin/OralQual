@@ -16,7 +16,7 @@ using EnsembleKalmanProcesses
 using StatsBase
 using KernelDensity
 using Flux
-
+using DifferentialEquations
 
 
 include("EKRMLE.jl")

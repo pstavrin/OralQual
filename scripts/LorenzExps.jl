@@ -58,7 +58,7 @@ H_Lor(nothing, v_true)
 ## EKRMLE
 Γ = (1/1)*I(n)
 J = 100
-V₀ = [12.0, 32.0, 7/3] .+ γ .*randn(3, J)
+V₀ = [15.0, 32.0, 1/3] .+ γ .*randn(3, J)
 obj = EKRMLEObj(V₀, y, Γ)
 ## Run
 steps = 10
