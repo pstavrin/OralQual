@@ -110,21 +110,6 @@ end
 
 
 
-function ℋ(v₁,v₂) # inverse map for sin Distribution
-    A = 1
-    ω = 2*π
-    return [v₁, v₂ + A*sin(ω*v₁)]
-end
-
-
-
-
-
-function ℋ(v₁,v₂) # inverse map of funnel Distribution
-    s = 1/2
-    return [v₁, v₂*exp(s*v₁)]
-end
-
 
 
 function ℋ(v₁,v₂) # iverse map of Banana Distribution
@@ -137,6 +122,21 @@ end
 
 
 
+function ℋ(v₁,v₂) # inverse map for sin Distribution
+    A = 1
+    ω = 2*π
+    return [v₁, v₂ + A*sin(ω*v₁)]
+end
+
+
+
+
+
+function ℋ(v₁,v₂) # inverse map of funnel Distribution
+    s = 2
+    return [v₁, v₂*exp(s*v₁)]
+end
+
 
 function init_rect(J; x1=-1,x2=1,y1=-2,y2=2)
     x = x1 .+ (x2-x1) .*rand(J)
@@ -147,10 +147,10 @@ end
 
 y = [0.0,0.0]
 Γ = (1/1)*I(2)
-J = 20_000
-steps = 100
+J = 10_000
+steps = 2000
 #V₀ = init_rect(J; x1=-8,x2=10,y1=-5,y2=10)
-V₀ = 1000 .*randn(2,J)
+V₀ = 0.1 .*randn(2,J)
 ekrmleobj = EKRMLEObj(V₀, y, Γ)
 H_single(::Nothing,v::AbstractVector) = ℋ(v[1],v[2])
 EKRMLE_run!(ekrmleobj, nothing, H_single, steps)
@@ -173,9 +173,9 @@ ys = range(-22,7,1000)
 α = 2; β = -0.9; γ = 1/2
 ρ(x, y) = (1/(α*γ))*ϕ(x/α)*ϕ((1/γ)*(y+β*((x/α)^2-1)))
 #ρ(x, y) = (2*sqrt(100))*ϕ(sqrt(2)*(-x+1))*ϕ(sqrt(2*100)*(y-x^2))
-s = 1/2
+s = 2
 #ρ(x, y) = (1/(2*pi))*exp(-(x^2)/2)*exp(-s*x/2)*exp(-0.5*(y^2)*exp(-s*x))
-#ρ(x, y) = exp(s*x)*ϕ(x)*ϕ(y*exp(s*x))
+ρ(x, y) = exp(s*x)*ϕ(x)*ϕ(y*exp(s*x))
 A = 1; ω = (2)*π;
 #ρ(x, y) = (1/(2π))*exp(-0.5*x^2 - 0.5*(y-A*sin(ω*x))^2)
 #ρ(x, y) = ϕ(x)*ϕ(y + A*sin(ω*x))
@@ -259,9 +259,10 @@ contourf!(ax, xsk,  ysk, Z;
 hidedecorations!(ax)
 hidespines!(ax)
 
-scatter!(ax, V[1,:], V[2,:], markersize = 10, color = ("#FEBB81",0.4))
+scatter!(ax, V[1,:], V[2,:], markersize = 15, color = ("#FEBB81",0.4))
 
-fig
+display(fig)
+#save("plots/FunnelDensity1WithEnsemble.svg",fig)
 
 ## try plotting conditionals
 ε = ekrmleobj.Yrand
@@ -370,7 +371,7 @@ function assign_bins_2d(ε; nbins::Int=6)
     return bin_id, bins1, bins2
 end
 
-bin_id, bins1, bins2 = assign_bins_2d(ε; nbins=5)
+bin_id, bins1, bins2 = assign_bins_2d(ε; nbins=6)
 
 # ----------------------------
 # Plot: ε-space grid + v-space image
@@ -393,21 +394,25 @@ fig
 
 V_Gauss = zeros(2, J)
 for j = 1:J
-    V_Gauss[:,j] = ℋ(V[1,j], V[2,j])
+    r = norm(ℋ(V[1,j], V[2,j]) - ε[:,j])
+    if r <= 1e-1
+        V_Gauss[:,j] = ℋ(V[1,j], V[2,j])
+    else
+        continue
+    end
 end
-
 
 fig = Figure(size=(1500, 500))
 
 
-axε = Axis(fig[1, 1], title="Noise space ε with 2D bins", xlabel="ε₁", ylabel="ε₂")
+axε = Axis(fig[1, 1], title="Noise", xlabel="ε₁", ylabel="ε₂")
 scatter!(axε, ε[1, :], ε[2, :], color=bin_id, markersize=10, colormap=:magma)
 
-axv = Axis(fig[1, 2], title="v-space colored by ε-bin id (image of bins)", xlabel="v₁", ylabel="v₂")
+axv = Axis(fig[1, 2], title="Final ensemble", xlabel="v₁", ylabel="v₂")
 scatter!(axv, V[1, :], V[2, :], color=bin_id, markersize=10, colormap=:magma)
 
 
-axg = Axis(fig[1, 3], title="Noise space ε with 2D bins", xlabel="ε₁", ylabel="ε₂")
+axg = Axis(fig[1, 3], title="Gaussianization", xlabel="ε₁", ylabel="ε₂")
 scatter!(axg, V_Gauss[1, :], V_Gauss[2, :], color=bin_id, markersize=10, colormap=:magma)
 
 
@@ -416,51 +421,9 @@ tightlimits!(axε)
 tightlimits!(axv)
 tightlimits!(axg)
 
-fig
+display(fig)
+#save("plots/FunnelGaussianizationWithTol.svg",fig)
 ##
 C = (V_Gauss .- mean(V_Gauss; dims=2)) * (V_Gauss .- mean(V_Gauss; dims=2))' / (J-1)
 C
 
-## Try and learn map from samples
-# data: X is 2×N matrix of banana samples
-# X[1,i]=x, X[2,i]=y
-
-function Hθ_apply(X::AbstractMatrix, η::AbstractVector)
-    @assert size(X,1)==2
-    a = exp(η[1])
-    b = η[2]
-    c = exp(η[3])
-    x = X[1,:]
-    y = X[2,:]
-    z1 = a .* x
-    z2 = c .* y .- b .* (x.^2 .- 1.0)
-    return vcat(z1', z2')  # 2×N
-end
-
-function corr(u, v)
-    u0 = u .- mean(u)
-    v0 = v .- mean(v)
-    return dot(u0, v0) / sqrt(dot(u0,u0) * dot(v0,v0) + 1e-16)
-end
-
-function residual_r(X::AbstractMatrix, η::AbstractVector)
-    Z = Hθ_apply(X, η)  # 2×N
-    μ = mean(Z; dims=2)[:,1]                   # length 2
-    C = cov(permutedims(Z))                    # 2×2 (cov expects obs in rows)
-    r_cov = vec(C .- I(2))                     # length 4
-
-    z1 = Z[1,:]; z2 = Z[2,:]
-    r_ng1 = corr(z1.^2, z2)
-    r_ng2 = corr(abs.(z1), z2)
-
-    return vcat(μ, r_cov, [r_ng1, r_ng2])      # length 2+4+2 = 8
-end
-
-# EKRMLE forward map for parameter particles:
-# given η (3-vector) return residual (8-vector)
-G(nothing, η) = residual_r(V, η)   # you'll wrap to accept your EKRMLE signature
-y = zeros(8)
-Γ = (1/1)*I(8)
-V₀ = [1.0,1.0,1.0] .+ rand(3, J)
-obj = EKRMLEObj(V₀,y,Γ)
-EKRMLE_run!(obj, nothing, G, steps)
